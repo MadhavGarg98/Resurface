@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #FFFDF7;
+  --bg-card: #FFFFFF;
+  --accent-yellow: #F5A623;
+  --accent-yellow-light: #FFF8E7;
+  --text-primary: #1A1A1A;
+  --text-secondary: #6B6B6B;
+  --text-tertiary: #9B9B9B;
+  --border-warm: #F0EBD8;
+}
+
+@layer base {
+  body {
+    @apply bg-[#FFFDF7] text-[#1A1A1A];
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .btn-yellow {
+    @apply bg-[#F5A623] text-white font-bold py-2 px-4 rounded-lg transition-all active:scale-95 shadow-sm hover:shadow-md;
+  }
+  
+  .card-warm {
+    @apply bg-white border border-[#F0EBD8] rounded-xl shadow-sm hover:shadow-md transition-shadow p-4;
+  }
+
+  .input-warm {
+    @apply bg-white border border-[#F0EBD8] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#F5A623] transition-colors;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #F0EBD8;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #DED9C4;
+}
+
+/* Transitions */
+.view-transition-enter {
+  opacity: 0;
+  transform: translateX(20px);
+}
+.view-transition-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 200ms, transform 200ms;
+}
+.view-transition-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+.view-transition-exit-active {
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 200ms, transform 200ms;
+}

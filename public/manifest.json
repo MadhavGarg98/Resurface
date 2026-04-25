@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Resurface",
+  "version": "1.0.0",
+  "description": "Save anything. AI resurfaces it when deadlines hit.",
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "tabs",
+    "alarms",
+    "notifications",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background/index.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "index.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["src/popup/dashboard.html", "src/popup/dashboard.jsx", "assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "commands": {
+    "save-resource": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Save current page or selected text to Resurface"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}
