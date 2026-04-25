@@ -94,7 +94,7 @@ async function handleSaveCommand() {
     }
     
     // ==========================================
-    // STEP 5: ENRICH WITH AI (if applicable)
+    // STEP 5: ENRICH WITH AI (UPDATED)
     // ==========================================
     
     if (shouldSummarize(resource)) {
@@ -108,17 +108,52 @@ async function handleSaveCommand() {
       });
       
       try {
-        resource.summary = await generateSummary(resource.textContent);
+        // Determine content type for summarization
+        let contentType = 'auto';
         
-        if (shouldGenerateBullets(resource)) {
-          resource.bulletSummary = await generateBulletSummary(resource.textContent);
+        if (resource.type === 'text') {
+          // Selected text
+          const textLen = (resource.textContent || '').length;
+          if (textLen < 200) contentType = 'none';
+          else if (textLen < 2000) contentType = 'short';
+          else contentType = 'detailed';
+        } else if (resource.type === 'page') {
+          // Full webpage
+          if (resource.isArticle || resource.sourcePageType === 'article') {
+            contentType = 'article';
+          } else {
+            contentType = 'fullpage';
+          }
+        } else {
+          // Link or other
+          contentType = 'short';
         }
+        
+        // Generate the appropriate summary
+        resource.summary = await generateSummary(resource.textContent, { contentType });
+        
+        // Generate bullets for longer content
+        if (shouldGenerateBullets(resource)) {
+          const bulletCount = resource.type === 'page' ? 5 : 3;
+          resource.bulletSummary = await generateBulletSummary(resource.textContent, bulletCount);
+        }
+        
+        // Track AI provider status
+        resource.aiProvider = 'groq'; 
+        
       } catch (error) {
         console.warn('AI summarization failed:', error);
-        resource.summary = null;
+        // Fallback: use first 200 chars as summary
+        resource.summary = (resource.textContent || resource.title || '').substring(0, 200).trim();
+        if (resource.textContent && resource.textContent.length > 200) {
+          resource.summary += '...';
+        }
         resource.bulletSummary = null;
       }
     }
+    
+    // Clear progress notification
+    chrome.notifications.clear('save-progress');
     
     // ==========================================
     // STEP 6: CATEGORIZE
