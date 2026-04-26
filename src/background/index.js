@@ -13,7 +13,7 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 });
 
-// Initialize other modules
+// Initialize modules
 initContextMenus();
 initTabListener();
 initAlarms();

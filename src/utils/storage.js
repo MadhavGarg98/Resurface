@@ -122,10 +122,20 @@ export const updateResource = async (id, updates) => {
 export const getSettings = async () => {
   try {
     const data = await chrome.storage.local.get(['settings']);
-    return data.settings || { groqApiKey: '', geminiApiKey: '', preferredOrder: 'Groq first (fastest)' };
+    return data.settings || { 
+      groqApiKey: '', 
+      geminiApiKey: '', 
+      preferredOrder: 'Groq first (fastest)',
+      showFloatingChat: true 
+    };
   } catch (error) {
     console.error('Error getting settings:', error);
-    return { groqApiKey: '', geminiApiKey: '', preferredOrder: 'Groq first (fastest)' };
+    return { 
+      groqApiKey: '', 
+      geminiApiKey: '', 
+      preferredOrder: 'Groq first (fastest)',
+      showFloatingChat: true
+    };
   }
 };
 

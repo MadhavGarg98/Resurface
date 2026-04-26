@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings as SettingsIcon, LayoutGrid, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Settings as SettingsIcon, LayoutGrid, ArrowLeft, ExternalLink, Database } from 'lucide-react';
 import QuickPopupSearchBar from './components/QuickPopupSearchBar.jsx';
 import QuickSaveButton from './components/QuickSaveButton.jsx';
 import RecentResourcesList from './components/RecentResourcesList.jsx';
@@ -14,6 +14,34 @@ export default function App() {
   const handleResultClick = (resource) => {
     setSelectedResource(resource);
     setView('detail');
+  };
+
+  const testSave = async () => {
+    const testResource = {
+      id: 'test-' + Date.now(),
+      type: 'link',
+      title: 'Diagnostic Test ' + new Date().toLocaleTimeString(),
+      url: 'https://resurface.test',
+      textContent: 'This is a diagnostic test resource to verify storage functionality.',
+      summary: 'Storage is working correctly!',
+      tags: ['diagnostic'],
+      projectId: null,
+      savedAt: new Date().toISOString(),
+      readStatus: 'unread',
+      accessCount: 0
+    };
+    
+    console.log('Saving test resource:', testResource);
+    
+    try {
+      const { saveResource, getResources } = await import('../utils/storage.js');
+      await saveResource(testResource);
+      const all = await getResources();
+      alert('Diagnostic Save Successful!\nTotal items in storage: ' + all.length);
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('Save failed: ' + error.message);
+    }
   };
 
   return (
@@ -50,12 +78,21 @@ export default function App() {
                 <span>Open Full Dashboard →</span>
               </button>
               
-              <button
-                onClick={() => setView('settings')}
-                className="p-1.5 text-[#9B9B9B] hover:text-[#F5A623] hover:bg-[#FFF8E7] rounded-lg transition-all"
-              >
-                <SettingsIcon size={16} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={testSave}
+                  title="Diagnostic Save"
+                  className="p-1.5 text-[#9B9B9B] hover:text-[#F5A623] hover:bg-[#FFF8E7] rounded-lg transition-all"
+                >
+                  <Database size={16} />
+                </button>
+                <button
+                  onClick={() => setView('settings')}
+                  className="p-1.5 text-[#9B9B9B] hover:text-[#F5A623] hover:bg-[#FFF8E7] rounded-lg transition-all"
+                >
+                  <SettingsIcon size={16} />
+                </button>
+              </div>
             </div>
           </motion.div>
         ) : view === 'settings' ? (

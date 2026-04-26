@@ -85,6 +85,29 @@ export default function Settings({ isCompact = false }) {
           </div>
         </div>
 
+        <div className="bg-white border border-[#F0EBD8] rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 text-[#F5A623] mb-2">
+            <RefreshCw size={18} />
+            <h3 className="text-sm font-bold uppercase tracking-wider">Proactive Features</h3>
+          </div>
+          
+          <div className="flex items-center justify-between p-3 bg-[#FFFDF7] border border-[#F0EBD8] rounded-xl">
+            <div className="space-y-0.5">
+              <p className="text-sm font-bold text-[#1A1A1A]">AI Chat Bot</p>
+              <p className="text-[10px] text-[#9B9B9B]">Show floating chat bubble on all pages</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={settings.showFloatingChat !== false}
+                onChange={(e) => setSettings({ ...settings, showFloatingChat: e.target.checked })}
+              />
+              <div className="w-11 h-6 bg-[#F0EBD8] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F5A623]"></div>
+            </label>
+          </div>
+        </div>
+
         <div className="flex items-center gap-4 pt-2">
           <button
             type="submit"

@@ -36,6 +36,7 @@ async function handleSaveCommand() {
     // STEP 1: Get current tab context
     // ==========================================
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    console.log('Step 1: Got tab context', tab?.url);
     
     if (!tab || !tab.url) {
       showNotification('Cannot Save', 'No active page detected.');
@@ -72,6 +73,7 @@ async function handleSaveCommand() {
     const hasSelectedText = selectionResult?.result?.hasSelection || false;
     const selectedText = selectionResult?.result?.text || '';
     const selectionLength = selectionResult?.result?.length || 0;
+    console.log('Step 2: Selection check', { hasSelectedText, selectionLength });
     
     // ==========================================
     // STEP 4: DECISION — What to save?
@@ -183,13 +185,16 @@ async function handleSaveCommand() {
     // ==========================================
     // STEP 8: FINALIZE & SAVE
     // ==========================================
+    console.log('Step 3: Building resource object');
     resource.id = uuidv4();
     resource.savedAt = new Date().toISOString();
     resource.lastAccessed = null;
     resource.accessCount = 0;
     resource.readStatus = 'unread';
     
+    console.log('Step 4: Saving to storage...', resource);
     await saveResource(resource);
+    console.log('Step 5: Saved successfully!');
     
     // Clear progress notification if it exists
     chrome.notifications.clear('save-progress');
@@ -206,10 +211,19 @@ async function handleSaveCommand() {
       message: summaryPreview || resource.title || 'Resource saved!',
       priority: 1
     });
+
+    // Also show in-page toast for absolute certainty
+    await showInPageToast(tab.id, 'Saved to Resurface', summaryPreview || resource.title);
     
   } catch (error) {
     console.error('Save failed:', error);
     showNotification('Save Failed', error.message || 'Something went wrong. Try again.');
+    
+    // Also show in-page toast for failure
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) {
+      await showInPageToast(tab.id, 'Save Failed', error.message || 'Something went wrong', 'error');
+    }
   }
 }
 
@@ -465,6 +479,70 @@ function showNotification(title, message) {
     message: message,
     priority: 1
   });
+}
+
+// ==========================================
+// HELPER: Show in-page toast confirmation
+// ==========================================
+async function showInPageToast(tabId, title, message, type = 'success') {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (t, m, ty) => {
+        // Simple inline version of the toast logic to ensure it always works
+        const existing = document.getElementById('resurface-inpage-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'resurface-inpage-toast';
+        const color = ty === 'success' ? '#F5A623' : '#E57373';
+        
+        Object.assign(toast.style, {
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: '2147483647',
+          background: '#FFFDF7',
+          border: '1px solid #F0EBD8',
+          borderLeft: `4px solid ${color}`,
+          borderRadius: '12px',
+          padding: '16px',
+          boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          minWidth: '280px',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          transform: 'translateX(120%)',
+          transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          pointerEvents: 'auto'
+        });
+
+        toast.innerHTML = `
+          <div style="width: 32px; height: 32px; background: ${color}15; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 800; color: #1A1A1A; font-size: 14px;">${t}</div>
+            <div style="color: #6B6B6B; font-size: 12px;">${m}</div>
+          </div>
+        `;
+
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => toast.style.transform = 'translateX(0)');
+        
+        setTimeout(() => {
+          toast.style.transform = 'translateX(120%)';
+          setTimeout(() => toast.remove(), 400);
+        }, 4000);
+      },
+      args: [title, message, type]
+    });
+  } catch (err) {
+    console.warn('Could not show in-page toast:', err);
+  }
 }
 
 export { handleSaveCommand };

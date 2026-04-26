@@ -1,7 +1,5 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
-
 import { fileURLToPath } from 'url';
 
 export default defineConfig({
@@ -19,15 +17,15 @@ export default defineConfig({
         contentScript: 'src/content/contentScript.js'
       },
       output: {
+        // Ensure background and contentScript are flat and easy to find
         entryFileNames: (chunkInfo) => {
-          if (chunkInfo.name === 'background') {
-            return 'src/background/index.js';
-          }
-          if (chunkInfo.name === 'contentScript') {
-            return 'src/content/contentScript.js';
-          }
+          if (chunkInfo.name === 'background') return 'src/background/index.js';
+          if (chunkInfo.name === 'contentScript') return 'src/content/contentScript.js';
           return 'assets/[name]-[hash].js';
-        }
+        },
+        // IMPORTANT: Content scripts cannot be ES modules in manifest.json
+        // We force them to be iife (immediately invoked function expression)
+        format: 'es', // background needs 'es' for type: module
       }
     }
   }
