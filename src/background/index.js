@@ -17,6 +17,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 initContextMenus();
 initTabListener();
 initAlarms();
+initMessageHandler();
 // Handle notification button clicks
 chrome.notifications.onButtonClicked.addListener((notificationId) => {
   if (notificationId.startsWith('help-categorize-')) {
