@@ -28,13 +28,13 @@
 ## 📋 Problem Statement
 
 ```mermaid
-graph LR
+flowchart LR
     A[Research] --> B[Scattered Info]
     B --> C1[Browser Bookmarks]
     B --> C2[Messaging Apps]
     B --> C3[Code Snippets]
     B --> C4[Documents]
-    C1 --> D[Can't Find When Needed]
+    C1 --> D["Can't Find When Needed"]
     C2 --> D
     C3 --> D
     C4 --> D
@@ -53,9 +53,9 @@ In deadline-driven workflows, critical information—links, notes, code snippets
 ## 💡 Solution
 
 ```mermaid
-graph TD
+flowchart TD
     A[User Browses] --> B{Ctrl+Shift+S}
-    B --> C[Capture Link/Text/Page]
+    B --> C["Capture Link/Text/Page"]
     C --> D[AI Auto-Categorization]
     C --> E[AI Summarization]
     C --> F[Deadline Detection]
@@ -64,10 +64,10 @@ graph TD
     E --> G
     F --> G
     
-    G --> H[Dashboard - Focus Mode]
+    G --> H["Dashboard - Focus Mode"]
     G --> I[Contextual Sidebar Nudge]
     G --> J[Smart NL Search]
-    G --> K[Floating Mini Chat 💬]
+    G --> K["Floating Mini Chat 💬"]
     G --> L[Auto-Recap Generator]
     
     H --> M[User Finds Resources Instantly]
@@ -88,11 +88,11 @@ Resurface is a browser extension that acts as a **deadline-aware knowledge compa
 ## 📐 Architecture Overview
 
 ```mermaid
-graph TB
+flowchart TB
     subgraph "Chrome Extension (Manifest V3)"
         BG[background.js<br/>Service Worker]
-        POP[popup/<br/>React SPA]
-        CS[content-script.js<br/>Page Injection]
+        POP["popup/<br/>React SPA"]
+        CS["content-script.js<br/>Page Injection"]
         
         BG -->|Commands API| CMD[Ctrl+Shift+S]
         BG -->|Context Menus| CTX[Right-Click]
@@ -102,7 +102,7 @@ graph TB
         BG -->|Messages| CS
         
         CS -->|Sidebar| SIDE[Contextual Nudge]
-        CS -->|Floating UI| CHAT[Mini Chat 💬]
+        CS -->|Floating UI| CHAT["Mini Chat 💬"]
         CS -->|Selection| SUMM[Page Summary]
         
         POP -->|React| DASH[Dashboard]
@@ -115,19 +115,19 @@ graph TB
         STORE[(chrome.storage.local)]
         STORE --> ITEMS[items[]]
         STORE --> PROJ[projects[]]
-        STORE --> KEYS[groqApiKey<br/>geminiApiKey]
+        STORE --> KEYS["groqApiKey<br/>geminiApiKey"]
     end
     
     subgraph "AI Layer"
-        LLC[llmClient.js<br/>Auto-Detection]
-        LLC -->|Primary| GROQ[Groq API<br/>Llama 3.1 8B<br/>~0.5s latency]
-        LLC -->|Fallback| GEM[Gemini API<br/>Flash 2.0<br/>~1.2s latency]
-        LLC -->|Format| CONV[OpenAI→Gemini<br/>Converter]
+        LLC["llmClient.js<br/>Auto-Detection"]
+        LLC -->|Primary| GROQ["Groq API<br/>Llama 3.1 8B<br/>~0.5s latency"]
+        LLC -->|Fallback| GEM["Gemini API<br/>Flash 2.0<br/>~1.2s latency"]
+        LLC -->|Format| CONV["OpenAI → Gemini<br/>Converter"]
     end
     
-    BG <--> STORE
-    POP <--> STORE
-    CS <--> STORE
+    BG <-> STORE
+    POP <-> STORE
+    CS <-> STORE
     BG --> LLC
     POP --> LLC
     CS --> LLC
@@ -172,7 +172,7 @@ sequenceDiagram
 ## ⭐ The 4 Automatic User Scenarios
 
 ```mermaid
-graph TD
+flowchart TD
     START[Extension Installed] --> CHECK{Check Storage}
     
     CHECK -->|Has Groq Key Only| GONLY[Use Groq Only]
@@ -195,7 +195,7 @@ graph TD
     GMSUCC -->|Yes| GMUSE[Use Gemini Result]
     GMSUCC -->|No| GFALL[Fallback to Groq]
     
-    NONE --> ONBOARD[Settings Page<br/>"Add at least one key"]
+    NONE --> ONBOARD["Settings Page<br/>'Add at least one key'"]
     
     GFLOW --> DONE[Feature Complete]
     GMFLOW --> DONE
@@ -1112,15 +1112,15 @@ pie title API Calls per Feature (User Session)
 ### 2-Minute Demo Flow
 
 ```mermaid
-graph LR
-    A[0:00<br/>Problem] --> B[0:15<br/>Save]
-    B --> C[0:35<br/>Dashboard]
-    C --> D[0:50<br/>Search]
-    D --> E[1:05<br/>Sidebar]
-    E --> F[1:20<br/>Mini Chat]
-    F --> G[1:40<br/>Summarize]
-    G --> H[1:55<br/>Recap]
-    H --> I[2:00<br/>Close]
+flowchart LR
+    A["0:00<br/>Problem"] --> B["0:15<br/>Save"]
+    B --> C["0:35<br/>Dashboard"]
+    C --> D["0:50<br/>Search"]
+    D --> E["1:05<br/>Sidebar"]
+    E --> F["1:20<br/>Mini Chat"]
+    F --> G["1:40<br/>Summarize"]
+    G --> H["1:55<br/>Recap"]
+    H --> I["2:00<br/>Close"]
     
     style A fill:#ff6b6b
     style B fill:#4ecdc4,color:#fff
@@ -1208,24 +1208,24 @@ zip -r resurface-v1.0.0.zip dist/
 ### When You're Ready to Launch as a Startup
 
 ```mermaid
-graph TD
-    NOW[Current: Free + Manual Keys] --> V1{Validated?}
+flowchart TD
+    NOW["Current: Free + Manual Keys"] --> V1{Validated?}
     
     V1 -->|Yes, users love it| V2[Backend Architecture]
     V1 -->|Needs iteration| NOW
     
     V2 --> BACKEND[Build Backend]
-    BACKEND --> SUPABASE[Supabase/Firebase<br/>Auth + DB + Edge Functions]
-    BACKEND --> STRIPE[Stripe Integration<br/>Subscription billing]
-    BACKEND --> PROXY[API Proxy Server<br/>Your keys, not users']
+    BACKEND --> SUPABASE["Supabase/Firebase<br/>Auth + DB + Edge Functions"]
+    BACKEND --> STRIPE["Stripe Integration<br/>Subscription billing"]
+    BACKEND --> PROXY["API Proxy Server<br/>Your keys, not users'"]
     
     SUPABASE --> TIERS{Tier Structure}
     STRIPE --> TIERS
     PROXY --> TIERS
     
-    TIERS --> FREE[Free Tier<br/>30 saves/month<br/>3 projects]
-    TIERS --> PRO[Pro Tier<br/>$7/month<br/>Unlimited everything]
-    TIERS --> TEAM[Team Tier<br/>$12/user/month<br/>Shared projects]
+    TIERS --> FREE["Free Tier<br/>30 saves/month<br/>3 projects"]
+    TIERS --> PRO["Pro Tier<br/>$7/month<br/>Unlimited everything"]
+    TIERS --> TEAM["Team Tier<br/>$12/user/month<br/>Shared projects"]
     
     PRO --> LAUNCH[Public Launch]
     TEAM --> LAUNCH
