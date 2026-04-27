@@ -51,30 +51,35 @@
     sidebarElement.innerHTML = `
       <style>
         #resurface-sidebar {
-          position: fixed; top: 0; right: 0; width: 360px; height: 100vh;
-          background: #FFFDF7; border-left: 1px solid #F0EBD8;
-          box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08); z-index: 2147483646;
-          transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column;
+          position: fixed; top: 50%; right: 24px; width: 340px; 
+          max-height: 70vh; background: #FFFDF7; 
+          border: 1px solid #E8E2D6; border-radius: 24px;
+          box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12); z-index: 2147483646;
+          transform: translateY(-50%) translateX(120%); 
+          transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+          font-family: system-ui, -apple-system, sans-serif; 
+          display: flex; flex-direction: column; overflow: hidden;
+          opacity: 0;
         }
-        #resurface-sidebar.visible { transform: translateX(0); }
-        .rs-header { padding: 20px; border-bottom: 1px solid #F0EBD8; display: flex; justify-content: space-between; align-items: center; background: #FFF; }
-        .rs-project-name { font-weight: 700; color: #1A1A1A; display: flex; align-items: center; gap: 8px; font-size: 15px; }
-        .rs-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-        .rs-close { background: none; border: none; font-size: 18px; color: #9B9B9B; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
-        .rs-close:hover { background: #FFF8E7; color: #1A1A1A; }
-        .rs-body { flex: 1; overflow-y: auto; padding: 20px; }
-        .rs-item { padding: 14px; background: #FFF; border: 1px solid #F0EBD8; border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
-        .rs-item:hover { border-color: #F5A623; background: #FFFDF7; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .rs-title { font-weight: 600; font-size: 13.5px; margin-bottom: 4px; color: #1A1A1A; }
-        .rs-summary { font-size: 12px; color: #6B6B6B; line-height: 1.5; }
-        .rs-footer { padding: 16px; border-top: 1px solid #F0EBD8; background: #FFF; }
-        .rs-btn { width: 100%; padding: 12px; background: #F5A623; color: #FFF; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: background 0.2s; font-size: 14px; }
-        .rs-btn:hover { background: #E09510; }
+        #resurface-sidebar.visible { transform: translateY(-50%) translateX(0); opacity: 1; }
+        .rs-header { padding: 18px 22px; border-bottom: 1px solid #F0EBD8; display: flex; justify-content: space-between; align-items: center; background: #FFF; }
+        .rs-project-name { font-weight: 700; color: #1A1A1A; display: flex; align-items: center; gap: 10px; font-size: 14.5px; }
+        .rs-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(0,0,0,0.03); }
+        .rs-close { background: none; border: none; font-size: 18px; color: #A8A29E; cursor: pointer; padding: 4px; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .rs-close:hover { background: #F3EFE8; color: #3D3832; }
+        .rs-body { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: none; }
+        .rs-body::-webkit-scrollbar { display: none; }
+        .rs-item { padding: 14px; background: #FFF; border: 1px solid #F0EBD8; border-radius: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
+        .rs-item:hover { border-color: #F5A623; background: #FFFDF7; transform: scale(1.02); box-shadow: 0 4px 12px rgba(120, 100, 70, 0.08); }
+        .rs-title { font-weight: 700; font-size: 13px; margin-bottom: 5px; color: #1A1A1A; line-height: 1.4; }
+        .rs-summary { font-size: 11.5px; color: #6B6B6B; line-height: 1.6; }
+        .rs-footer { padding: 16px 20px; border-top: 1px solid #F0EBD8; background: #FDFCFA; }
+        .rs-btn { width: 100%; padding: 12px; background: #C49A6C; color: #FFF; border: none; border-radius: 14px; cursor: pointer; font-weight: 700; transition: all 0.2s; font-size: 13px; box-shadow: 0 4px 12px rgba(196, 154, 108, 0.2); }
+        .rs-btn:hover { background: #B08A5E; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(196, 154, 108, 0.25); }
       </style>
       <div class="rs-header">
         <div class="rs-project-name">
-          <span class="rs-dot" style="background: ${projectColor};"></span>
+          <div class="rs-dot" style="background: ${projectColor};"></div>
           ${escapeHTML(data.project?.name || 'Saved Resources')}
         </div>
         <button class="rs-close" id="rs-close-sidebar">✕</button>
@@ -112,12 +117,62 @@
       window.open(chrome.runtime.getURL('src/popup/dashboard.html'), '_blank');
     };
 
-    sidebarElement.querySelectorAll('.rs-item').forEach(item => {
-      item.onclick = () => {
-        const url = item.getAttribute('data-url');
-        if (url) window.open(url, '_blank');
+    function updateSidebarToDetails(resource) {
+      const body = sidebarElement.querySelector('.rs-body');
+      const footer = sidebarElement.querySelector('.rs-footer');
+      
+      // Save original list for "Back" button
+      const originalBodyHTML = body.innerHTML;
+      const originalFooterHTML = footer.innerHTML;
+
+      body.innerHTML = `
+        <div style="animation: rsFadeIn 0.3s ease;">
+          <button id="rs-back-btn" style="background:none; border:none; color:#C49A6C; font-weight:700; font-size:12px; cursor:pointer; margin-bottom:15px; padding:0; display:flex; align-items:center; gap:5px;">
+            ← Back to list
+          </button>
+          <div style="font-weight:800; font-size:16px; color:#1A1A1A; margin-bottom:12px; line-height:1.4;">
+            ${escapeHTML(resource.title || 'Untitled')}
+          </div>
+          <div style="font-size:13px; color:#4A4A4A; line-height:1.7; white-space:pre-wrap;">
+            ${escapeHTML(resource.summary || resource.textContent || 'No detailed summary available.')}
+          </div>
+        </div>
+        <style>
+          @keyframes rsFadeIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+        </style>
+      `;
+
+      footer.innerHTML = `
+        <div style="display:flex; gap:10px;">
+          <button id="rs-open-link-btn" class="rs-btn" style="flex:2;">🌐 Open Original Link</button>
+        </div>
+      `;
+
+      document.getElementById('rs-back-btn').onclick = () => {
+        body.innerHTML = originalBodyHTML;
+        footer.innerHTML = originalFooterHTML;
+        attachItemClickHandlers();
+        // Restore dash button handler
+        document.getElementById('rs-dash-btn').onclick = () => {
+          window.open(chrome.runtime.getURL('src/popup/dashboard.html'), '_blank');
+        };
       };
-    });
+
+      document.getElementById('rs-open-link-btn').onclick = () => {
+        window.open(resource.url, '_blank');
+      };
+    }
+
+    function attachItemClickHandlers() {
+      sidebarElement.querySelectorAll('.rs-item').forEach((item, index) => {
+        item.onclick = () => {
+          const resource = data.resources[index];
+          if (resource) updateSidebarToDetails(resource);
+        };
+      });
+    }
+
+    attachItemClickHandlers();
 
     // Auto-close on Escape
     const escHandler = (e) => {
