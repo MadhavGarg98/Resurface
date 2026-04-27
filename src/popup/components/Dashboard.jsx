@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, LayoutGrid, Zap } from 'lucide-react';
-import { getProjects, getResources, saveProject, updateResource, deleteResource } from '../../utils/storage.js';
+import { getProjects, getResources, saveProject, updateResource, deleteResource, deleteProject } from '../../utils/storage.js';
 import { smartSearch } from '../../utils/smartSearch.js';
 import ProjectCard from './ProjectCard.jsx';
 import ResourceItem from './ResourceItem.jsx';
@@ -14,24 +14,44 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
 
   const loadData = useCallback(async () => {
+    console.log('[Dashboard] Loading data...');
     setLoading(true);
     const [p, r] = await Promise.all([getProjects(), getResources()]);
+    console.log('[Dashboard] Projects loaded:', p.length, p);
+    console.log('[Dashboard] Resources loaded:', r.length, r);
     setProjects(p);
     setResources(r);
     setLoading(false);
+    console.log('[Dashboard] State updated');
   }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const handleCreateProject = async (newProject) => {
-    await saveProject(newProject);
+  const handleCreateProject = async (projectData) => {
+    await saveProject(projectData);
+    setEditingProject(null);
     await loadData();
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    console.log('[Dashboard] Deleting project:', projectId);
+    await deleteProject(projectId);
+    await loadData();
+    console.log('[Dashboard] Project deleted, data refreshed');
+  };
+
+  const handleUpdateProject = async (projectId, updates) => {
+    console.log('[Dashboard] Updating project:', projectId, updates);
+    await updateProject(projectId, updates);
+    await loadData();
+    console.log('[Dashboard] Project updated, data refreshed');
   };
 
   const handleSearch = async (query) => {
@@ -83,7 +103,10 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
           </p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setEditingProject(null);
+            setIsModalOpen(true);
+          }}
           className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95"
         >
           <Plus className="w-5 h-5" />
@@ -113,8 +136,7 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
                   key={r.id} 
                   resource={r} 
                   project={projects.find(p => p.id === r.projectId)}
-                  onMarkRead={handleMarkRead}
-                  onDelete={handleDeleteResource}
+                  onUpdate={loadData}
                   onOpen={onOpenResource}
                 />
               ))}
@@ -136,20 +158,30 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
                 <LayoutGrid className="w-4 h-4" /> Your Projects
               </h2>
               <div className="grid grid-cols-1 gap-4">
-                {sortedProjects.map(p => (
-                  <ProjectCard 
-                    key={p.id} 
-                    project={p} 
-                    resourceCount={resources.filter(r => r.projectId === p.id).length}
-                    unreadCount={resources.filter(r => r.projectId === p.id && r.readStatus === 'unread').length}
-                    onClick={() => onProjectClick(p)}
-                  />
-                ))}
+                {sortedProjects.map(p => {
+                  const projectResources = resources.filter(r => r.projectId === p.id);
+                  const unreadCount = projectResources.filter(r => r.readStatus === 'unread').length;
+                  
+                  return (
+                    <ProjectCard 
+                      key={p.id} 
+                      project={p} 
+                      resourceCount={projectResources.length}
+                      unreadCount={unreadCount}
+                      onClick={() => onProjectClick(p)}
+                      onUpdate={handleUpdateProject}
+                      onDelete={handleDeleteProject}
+                    />
+                  );
+                })}
                 {projects.length === 0 && (
                   <div className="p-8 text-center bg-slate-800/50 border-2 border-dashed border-slate-700 rounded-2xl">
                     <p className="text-slate-400 text-sm font-medium mb-3">Organize your saves into projects.</p>
                     <button 
-                      onClick={() => setIsModalOpen(true)}
+                      onClick={() => {
+                        setEditingProject(null);
+                        setIsModalOpen(true);
+                      }}
                       className="text-blue-400 text-sm font-bold hover:text-blue-300"
                     >
                       Create your first project →
@@ -167,8 +199,7 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
                     key={r.id} 
                     resource={r} 
                     project={projects.find(p => p.id === r.projectId)}
-                    onMarkRead={handleMarkRead}
-                    onDelete={handleDeleteResource}
+                    onUpdate={loadData}
                     onOpen={onOpenResource}
                   />
                 ))}
@@ -193,6 +224,7 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         onSave={handleCreateProject}
+        initialData={editingProject}
       />
     </div>
   );

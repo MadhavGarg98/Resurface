@@ -63,12 +63,17 @@
       </div>
       <div class="rs-body">
         <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #1A1A1A;">💡 Related Resources</div>
-        ${data.resources.map(r => `
+        ${data.resources.length > 0 ? data.resources.map(r => `
           <div class="rs-item" onclick="window.open('${r.url}', '_blank')">
             <div class="rs-title">${r.title || 'Untitled'}</div>
             <div class="rs-summary">${(r.summary || r.textContent || '').substring(0, 100)}...</div>
           </div>
-        `).join('')}
+        `).join('') : `
+          <div style="padding: 40px 20px; text-align: center; color: #9B9B9B; font-size: 13px;">
+            <div style="font-size: 24px; margin-bottom: 12px;">📚</div>
+            No resources saved for this project yet. Start by saving this page!
+          </div>
+        `}
       </div>
       <div class="rs-footer">
         <button class="rs-btn" id="rs-dash-btn">Open Dashboard</button>
@@ -87,6 +92,9 @@
       window.open(chrome.runtime.getURL('src/popup/dashboard.html'), '_blank');
     };
   }
+
+  // Expose globally for the background script's executeScript
+  window.__resurfaceShowSidebar = showSidebar;
 
   // ============================================
   // DRAGGABLE CHAT BOT LOGIC
@@ -290,4 +298,7 @@
   // ============================================
   initSidebar();
   initChat();
+
+  // HEARTBEAT: Ask background if we should show a sidebar
+  chrome.runtime.sendMessage({ action: 'CHECK_FOR_SIDEBAR' });
 })();

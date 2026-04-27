@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Layout, Plus, Check } from 'lucide-react';
+import { X, Layout, Plus, Check, Save } from 'lucide-react';
 
 const COLORS = [
   '#F5A623', // Yellow
@@ -13,7 +13,7 @@ const COLORS = [
   '#90A4AE'  // Gray
 ];
 
-export default function CreateProjectModal({ isOpen, onClose, onSave }) {
+export default function CreateProjectModal({ isOpen, onClose, onSave, initialData = null }) {
   const [formData, setFormData] = useState({
     name: '',
     keywords: '',
@@ -22,16 +22,30 @@ export default function CreateProjectModal({ isOpen, onClose, onSave }) {
     color: COLORS[0]
   });
 
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        keywords: (initialData.keywords || []).join(', '),
+        urls: (initialData.relatedUrls || []).join(', '),
+        deadline: initialData.deadline || '',
+        color: initialData.color || COLORS[0]
+      });
+    } else {
+      setFormData({ name: '', keywords: '', urls: '', deadline: '', color: COLORS[0] });
+    }
+  }, [initialData, isOpen]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
     onSave({
+      ...(initialData || {}),
       ...formData,
       keywords: formData.keywords.split(',').map(k => k.trim()).filter(k => k),
-      urls: formData.urls.split(',').map(u => u.trim()).filter(u => u),
+      relatedUrls: formData.urls.split(',').map(u => u.trim()).filter(u => u),
     });
-    setFormData({ name: '', keywords: '', urls: '', deadline: '', color: COLORS[0] });
     onClose();
   };
 
@@ -59,7 +73,9 @@ export default function CreateProjectModal({ isOpen, onClose, onSave }) {
                   <div className="p-2.5 bg-[#FFF8E7] text-[#F5A623] rounded-xl">
                     <Layout size={24} />
                   </div>
-                  <h2 className="text-2xl font-black text-[#1A1A1A] tracking-tight">New Project</h2>
+                  <h2 className="text-2xl font-black text-[#1A1A1A] tracking-tight">
+                    {initialData ? 'Edit Project' : 'New Project'}
+                  </h2>
                 </div>
                 <button 
                   onClick={onClose}
@@ -105,6 +121,18 @@ export default function CreateProjectModal({ isOpen, onClose, onSave }) {
                   </div>
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-[#9B9B9B] uppercase tracking-widest">Related URLs (Comma separated)</label>
+                  <input
+                    type="text"
+                    value={formData.urls}
+                    onChange={(e) => setFormData({ ...formData, urls: e.target.value })}
+                    placeholder="wikipedia.org, github.com/*, docs.google.com"
+                    className="w-full bg-[#FFFDF7] border border-[#F0EBD8] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#F5A623] transition-colors"
+                  />
+                  <p className="text-[10px] text-[#9B9B9B]">The sidebar will appear proactively on these sites.</p>
+                </div>
+
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-[#9B9B9B] uppercase tracking-widest">Project Theme</label>
                   <div className="flex flex-wrap gap-3">
@@ -134,8 +162,8 @@ export default function CreateProjectModal({ isOpen, onClose, onSave }) {
                     type="submit"
                     className="flex-[2] bg-[#F5A623] hover:bg-[#E09512] text-white font-bold py-4 rounded-2xl shadow-xl shadow-[#F5A623]/20 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
-                    <Plus size={20} />
-                    <span>Create Project</span>
+                    {initialData ? <Save size={20} /> : <Plus size={20} />}
+                    <span>{initialData ? 'Save Changes' : 'Create Project'}</span>
                   </button>
                 </div>
               </form>
