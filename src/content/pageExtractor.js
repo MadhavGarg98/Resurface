@@ -1,10 +1,12 @@
+import { extractPDFWithPDFJS, isPDFPage } from './pdfExtractor.js';
+
 /**
  * Extract meaningful content from the current page
  * Runs in page context via chrome.scripting.executeScript
  * @param {string} pageType - Type detected by pageTypeDetector
  * @returns {object} { text, metadata }
  */
-function extractPageContent(pageType = 'unknown') {
+async function extractPageContent(pageType = 'unknown') {
   
   // ==========================================
   // HELPER: Get article content
@@ -110,11 +112,32 @@ function extractPageContent(pageType = 'unknown') {
       break;
     
     case 'pdf':
-      // PDF in Chrome's viewer
-      const pdfText = document.querySelector('embed') ? 'PDF document' : 
-                     document.body?.innerText?.substring(0, 1000) || 'PDF document';
-      text = pdfText;
-      metadata = { isPDF: true };
+      if (isPDFPage()) {
+        console.log('[PageExtractor] PDF detected, using PDF.js extraction');
+        const pdfResult = await extractPDFWithPDFJS();
+        
+        return {
+          text: pdfResult.text || '',
+          title: pdfResult.title || getSmartTitle(),
+          favicon: getFavicon(),
+          url: window.location.href,
+          pageType: 'pdf',
+          metadata: {
+            isPDF: true,
+            pageCount: pdfResult.pageCount || 1,
+            pdfMetadata: pdfResult.metadata || {},
+            extractionMethod: pdfResult.extractionMethod || 'unknown',
+            hasContent: pdfResult.success && pdfResult.text.length > 50
+          },
+          isArticle: true,
+          contentLength: (pdfResult.text || '').length
+        };
+      } else {
+        const pdfText = document.querySelector('embed') ? 'PDF document' : 
+                       document.body?.innerText?.substring(0, 1000) || 'PDF document';
+        text = pdfText;
+        metadata = { isPDF: true };
+      }
       break;
     
     case 'image':

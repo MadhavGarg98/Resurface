@@ -106,6 +106,27 @@ export default function Settings({ isCompact = false }) {
               <div className="w-11 h-6 bg-[#E8E2D6] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C49A6C]"></div>
             </label>
           </div>
+
+          <div className="flex items-center justify-between p-3 bg-[#FAF8F5] border border-[#E8E2D6] rounded-xl">
+            <div className="space-y-0.5">
+              <p className="text-sm font-bold text-[#3D3832]">Resurface Sidebar</p>
+              <p className="text-[10px] text-[#A8A29E]">Show saved resources on matching pages</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={settings.sidebarEnabled !== false}
+                onChange={(e) => {
+                  const newState = e.target.checked;
+                  setSettings({ ...settings, sidebarEnabled: newState });
+                  // Also update the dedicated key for the background script
+                  chrome.storage.local.set({ sidebarEnabled: newState });
+                }}
+              />
+              <div className="w-11 h-6 bg-[#E8E2D6] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C49A6C]"></div>
+            </label>
+          </div>
         </div>
 
         <div className="flex items-center gap-4 pt-2">

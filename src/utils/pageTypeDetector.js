@@ -10,7 +10,7 @@ function detectPageType(url, title) {
   // Check URL patterns (order matters - more specific first):
   
   // 1. File extension checks
-  if (url.match(/\.(pdf)$/i)) return 'pdf';
+  if (url.match(/\.pdf(\?.*|#.*)?$/i) || url.match(/[?&]file=.*\.pdf/i) || url.match(/\/pdf\//i)) return 'pdf';
   if (url.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i)) return 'image';
   if (url.match(/\.(mp4|webm|mov|avi)$/i)) return 'video';
   

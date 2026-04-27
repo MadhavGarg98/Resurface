@@ -19,8 +19,15 @@ import { callLLM } from './llmClient.js';
 export async function generateSummary(text, options = {}) {
   const {
     contentType = 'auto',  // 'selection', 'fullpage', 'article', 'link', 'auto'
-    maxLength = 200        // max chars for summary
+    maxLength = 200,       // max chars for summary
+    fileType = null,
+    metadata = {}
   } = options;
+  
+  // Route PDF content to specialized summarizer
+  if (fileType === 'pdf' || metadata?.isPDF) {
+    return generatePDFSummary(text, metadata);
+  }
   
   const textLength = (text || '').length;
   
@@ -144,5 +151,107 @@ export async function generateBulletSummary(text, count = 3) {
   } catch (error) {
     console.error('Bullet summary failed:', error);
     return [];
+  }
+}
+
+// ============================================
+// PDF-SPECIFIC SUMMARIZATION
+// ============================================
+
+/**
+ * Generate summary for PDF content with depth based on page count
+ * 
+ * Summary Depth:
+ * ┌──────────────┬──────────────────────────────────────┐
+ * │ 1-3 pages    │ Concise summary (3-4 sentences)      │
+ * │ 4-10 pages   │ Summary + 5 key takeaways            │
+ * │ 11+ pages    │ Executive summary + 7 takeaways      │
+ * └──────────────┴──────────────────────────────────────┘
+ */
+export async function generatePDFSummary(text, metadata = {}) {
+  const pageCount = metadata.pageCount || 1;
+  const textLength = (text || '').length;
+  
+  // Too short for summary
+  if (textLength < 200) {
+    return text.trim();
+  }
+  
+  // PDFs are denser — capture more context
+  const truncatedText = text.substring(0, 6000);
+  
+  let prompt;
+  let maxTokens;
+  
+  if (pageCount <= 3) {
+    // 1-3 pages: Full summary (4-6 sentences)
+    prompt = `You are summarizing a short PDF document (${pageCount} page${pageCount > 1 ? 's' : ''}). Write a clear, comprehensive summary (4-6 sentences) covering the main topic and key points. Be specific and informative — mention actual content.
+
+PDF Content:
+${truncatedText}`;
+    maxTokens = 300;
+  } else if (pageCount <= 10) {
+    // 4-10 pages: Summary + 5 key takeaways
+    prompt = `You are summarizing a ${pageCount}-page PDF document. Provide:
+
+1. A detailed summary paragraph (4-6 sentences) covering the main topic, purpose, and key findings
+2. Then list the 5 most important takeaways as bullet points (• )
+
+Be thorough and specific.
+
+PDF Content:
+${truncatedText}`;
+    maxTokens = 500;
+  } else if (pageCount <= 25) {
+    // 11-25 pages: Executive summary + 7 takeaways
+    prompt = `You are creating an executive summary of a ${pageCount}-page PDF document. Provide:
+
+1. Document overview: what this document is about and its purpose (1-2 sentences)
+2. Executive summary (5-8 sentences covering major sections and conclusions)
+3. 7 key takeaways as bullet points (• )
+
+Make it comprehensive but scannable.
+
+PDF Content:
+${truncatedText}`;
+    maxTokens = 700;
+  } else if (pageCount <= 50) {
+    // 26-50 pages: Section-by-section overview + 10 key takeaways
+    prompt = `You are creating a comprehensive summary of a ${pageCount}-page PDF document. Provide:
+
+1. Document overview (2-3 sentences)
+2. Section-by-section overview (summarize the flow and major parts of the document in 2-3 paragraphs)
+3. 10 key takeaways as bullet points (• )
+
+PDF Content:
+${truncatedText}`;
+    maxTokens = 1000;
+  } else {
+    // 50+ pages: Sampling based summary
+    prompt = `You are summarizing a massive ${pageCount}-page PDF document based on sampled pages. Provide:
+
+1. Executive Document Overview (what this is and why it exists)
+2. Major findings or themes based on the provided excerpts (2-3 paragraphs)
+3. 10 major takeaways as bullet points (• )
+4. A concluding sentence on the document's overall value or purpose
+
+PDF Content Excerpts:
+${truncatedText}`;
+    maxTokens = 1200;
+  }
+  
+  try {
+    const result = await callLLM({
+      messages: [{ role: 'user', content: prompt }],
+      maxTokens,
+      temperature: 0.3
+    });
+    
+    let summary = result.text.trim();
+    summary = summary.replace(/^(summary:|here's a summary:|in summary:|to summarize:)/i, '').trim();
+    return summary;
+  } catch (error) {
+    console.error('[Summarizer] PDF summary failed:', error);
+    return text.substring(0, 300).trim() + (textLength > 300 ? '...' : '');
   }
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings as SettingsIcon, LayoutGrid, ArrowLeft, ExternalLink, Database, ChevronRight } from 'lucide-react';
+import { Settings as SettingsIcon, LayoutGrid, ArrowLeft, ExternalLink, Database, ChevronRight, Pin } from 'lucide-react';
 import QuickPopupSearchBar from './components/QuickPopupSearchBar.jsx';
 import QuickSaveButton from './components/QuickSaveButton.jsx';
 import RecentResourcesList from './components/RecentResourcesList.jsx';
@@ -13,8 +13,16 @@ export default function App() {
   const [view, setView] = useState('main'); // main, settings, detail
   const [selectedResource, setSelectedResource] = useState(null);
   const [pendingClassification, setPendingClassification] = useState(null);
+  const [isSidebarEnabled, setIsSidebarEnabled] = useState(true);
 
   useEffect(() => {
+    // Load sidebar setting
+    chrome.storage.local.get(['sidebarEnabled'], (result) => {
+      if (result.sidebarEnabled !== undefined) {
+        setIsSidebarEnabled(result.sidebarEnabled);
+      }
+    });
+
     // Check for pending classification
     chrome.storage.local.get(['_pendingClassification'], (result) => {
       if (result._pendingClassification) {
@@ -22,6 +30,13 @@ export default function App() {
       }
     });
   }, []);
+
+  const toggleSidebar = () => {
+    const newState = !isSidebarEnabled;
+    setIsSidebarEnabled(newState);
+    chrome.storage.local.set({ sidebarEnabled: newState });
+    console.log('[Popup] Sidebar enabled:', newState);
+  };
 
   const handleConfirmClassification = async (projectId, tags) => {
     if (!pendingClassification) return;
@@ -137,6 +152,8 @@ export default function App() {
             </AnimatePresence>
 
             <QuickSaveButton />
+
+
 
             <div className="flex-1 overflow-hidden flex flex-col">
               <h3 className="text-[10px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-3">

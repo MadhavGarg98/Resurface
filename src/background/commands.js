@@ -132,7 +132,11 @@ async function handleSaveCommand() {
         }
         
         // Generate the appropriate summary
-        resource.summary = await generateSummary(resource.textContent, { contentType });
+        resource.summary = await generateSummary(resource.textContent, {
+          contentType,
+          fileType: resource.fileType || null,
+          metadata: resource.metadata || {}
+        });
         
         // Generate bullets for longer content
         if (shouldGenerateBullets(resource)) {
@@ -216,6 +220,13 @@ async function handleSaveCommand() {
         resource.projectId = classification.projectId;
         resource.tags = [...new Set([...(resource.tags || []), ...classification.suggestedTags])];
       }
+      
+      // ==========================================
+      // STEP 6.5: AUTO-CREATE PROJECT IF NEEDED
+      // ==========================================
+      const finalProjectId = await autoCreateProjectIfNeeded(resource, classification, tab);
+      resource.projectId = finalProjectId || resource.projectId;
+      
     } catch (error) {
       console.warn('Categorization failed:', error);
       resource.projectId = null;
@@ -416,11 +427,157 @@ async function saveByPageType(tab, pageType) {
   let resourceType, needsSummary, needsBullets;
   
   switch (pageType) {
-    case 'pdf':
-      resourceType = 'link';
-      needsSummary = false;
-      needsBullets = false;
-      break;
+    case 'pdf': {
+      // ==========================================
+      // PDF.js extraction — load library on-demand
+      // ==========================================
+      let pdfData = { success: false, text: '', pageCount: 1, title: '' };
+      try {
+        const [pdfResult] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          world: 'MAIN',
+          func: async () => {
+            try {
+              // Load PDF.js from CDN if not already loaded
+              if (!window.pdfjsLib) {
+                await new Promise((resolve, reject) => {
+                  const s = document.createElement('script');
+                  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                  s.onload = () => {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    resolve();
+                  };
+                  s.onerror = reject;
+                  document.head.appendChild(s);
+                });
+              }
+
+              const url = window.location.href;
+              const pdf = await window.pdfjsLib.getDocument({ url, disableAutoFetch: true }).promise;
+
+              let pageIndexes = [];
+              if (pdf.numPages <= 30) {
+                for (let i = 1; i <= pdf.numPages; i++) pageIndexes.push(i);
+              } else {
+                // Sample pages for large PDFs (max 10 pages sampled)
+                pageIndexes.push(1); // First page
+                pageIndexes.push(pdf.numPages); // Last page
+                const step = Math.max(1, Math.floor(pdf.numPages / 8));
+                for (let i = step; i < pdf.numPages; i += step) {
+                  if (!pageIndexes.includes(i)) pageIndexes.push(i);
+                }
+                pageIndexes.sort((a, b) => a - b);
+              }
+
+              const fullText = [];
+              for (const i of pageIndexes) {
+                const page = await pdf.getPage(i);
+                const tc = await page.getTextContent();
+                let lastY = null;
+                const parts = [];
+                for (const item of tc.items) {
+                  if (lastY !== null && Math.abs(item.transform[5] - lastY) > 2) parts.push('\n');
+                  parts.push(item.str);
+                  lastY = item.transform[5];
+                }
+                const pageContent = parts.join(' ').replace(/ \n /g, '\n');
+                if (pdf.numPages > 30) {
+                  fullText.push(`[Page ${i}]\n${pageContent}`);
+                } else {
+                  fullText.push(pageContent);
+                }
+              }
+
+              // Get metadata
+              let pdfTitle = '';
+              try {
+                const meta = await pdf.getMetadata();
+                pdfTitle = meta?.info?.Title || '';
+              } catch (e) {}
+
+              if (!pdfTitle) {
+                pdfTitle = decodeURIComponent(
+                  url.split('/').pop()?.split('?')[0]?.replace(/\.pdf$/i, '')?.replace(/[_-]/g, ' ') || 'PDF Document'
+                );
+              }
+
+              const combined = fullText.join('\n\n')
+                .replace(/\0/g, '')
+                .replace(/(\w)-\n\s*(\w)/g, '$1$2')
+                .replace(/\n{3,}/g, '\n\n')
+                .replace(/[ \t]{2,}/g, ' ')
+                .trim();
+
+              return {
+                success: true,
+                text: combined,
+                pageCount: pdf.numPages,
+                title: pdfTitle
+              };
+            } catch (error) {
+              return {
+                success: false, text: '', pageCount: 1,
+                title: 'PDF Document', error: error.message
+              };
+            }
+          }
+        });
+        pdfData = pdfResult?.result || pdfData;
+      } catch (e) {
+        console.warn('PDF extraction executeScript failed:', e);
+      }
+
+      if (pdfData.success && pdfData.text && pdfData.text.length > 50) {
+        resourceType = 'page';
+        needsSummary = pdfData.text.length > 200;
+        needsBullets = pdfData.text.length > 1000;
+
+        return {
+          type: 'page',
+          title: `📄 ${pdfData.title || 'PDF Document'}`,
+          url: tab.url,
+          textContent: pdfData.text.substring(0, 10000),
+          textLength: pdfData.text.length,
+          needsSummary,
+          needsBullets,
+          sourceFavicon: tab.favIconUrl || '',
+          sourcePageType: 'pdf',
+          isArticle: true,
+          fileType: 'pdf',
+          metadata: {
+            pageCount: pdfData.pageCount,
+            hasContent: true,
+            extractionMethod: 'pdfjs'
+          },
+          readingTimeMinutes: Math.ceil(pdfData.text.length / 1500)
+        };
+      } else {
+        // PDF.js failed — save as link with note
+        resourceType = 'link';
+        needsSummary = false;
+        needsBullets = false;
+
+        return {
+          type: 'link',
+          title: `📄 ${pdfData.title || tab.title || 'PDF Document'}`,
+          url: tab.url,
+          textContent: `PDF document — text extraction was not possible`,
+          textLength: 0,
+          needsSummary: false,
+          needsBullets: false,
+          sourceFavicon: tab.favIconUrl || '',
+          sourcePageType: 'pdf',
+          isArticle: false,
+          fileType: 'pdf',
+          metadata: {
+            pageCount: pdfData.pageCount || null,
+            hasContent: false,
+            extractionError: pdfData.error || 'Unknown'
+          }
+        };
+      }
+    }
     
     case 'image':
       resourceType = 'link';
@@ -495,10 +652,14 @@ async function saveByPageType(tab, pageType) {
 // HELPER: Should we summarize this resource?
 // ==========================================
 function shouldSummarize(resource) {
-  // Never summarize these types
-  const noSummaryTypes = ['image', 'video', 'pdf'];
-  if (noSummaryTypes.includes(resource.sourcePageType)) return false;
+  // Never summarize these types (PDF removed — it now gets text extraction)
+  const noSummaryTypes = ['image', 'video'];
+  if (noSummaryTypes.includes(resource.sourcePageType) && resource.fileType !== 'pdf') return false;
   if (resource.fileType && noSummaryTypes.includes(resource.fileType)) return false;
+  
+  // PDF with extracted content should be summarized
+  if (resource.fileType === 'pdf' && resource.metadata?.hasContent) return true;
+  if (resource.fileType === 'pdf' && !resource.metadata?.hasContent) return false;
   
   // Don't summarize if text is too short
   const textLength = (resource.textContent || '').length;
@@ -593,6 +754,66 @@ async function showInPageToast(tabId, title, message, type = 'success') {
   } catch (err) {
     console.warn('Could not show in-page toast:', err);
   }
+}
+
+async function autoCreateProjectIfNeeded(resource, classification, tab) {
+  // If high confidence match exists, use it
+  if (classification && classification.confidence >= 70 && classification.projectId) {
+    return classification.projectId;
+  }
+  
+  // No good match — create a new project automatically
+  console.log('[AutoCreate] No matching project found. Creating one...');
+  
+  // Generate project details from the resource and URL
+  let domain = '';
+  try {
+    domain = new URL(tab.url).hostname.replace('www.', '');
+  } catch (e) {
+    domain = 'unknown';
+  }
+  
+  const domainName = domain.split('.')[0];
+  const capitalizedName = domainName.charAt(0).toUpperCase() + domainName.slice(1);
+  
+  const newProject = {
+    id: uuidv4(),
+    name: classification?.suggestedNewProject?.name || capitalizedName || 'New Project',
+    keywords: classification?.suggestedNewProject?.keywords || 
+              classification?.suggestedTags || 
+              [domainName, ...(resource.title || '').split(' ').slice(0, 3)].filter(k => k),
+    relatedUrls: [`${domain}/*`],
+    description: classification?.suggestedNewProject?.description || `Resources from ${domain}`,
+    color: classification?.suggestedNewProject?.color || getRandomColor(),
+    deadline: null,
+    archived: false,
+    createdAt: new Date().toISOString()
+  };
+  
+  try {
+    const { saveProject } = await import('../utils/storage.js');
+    const saved = await saveProject(newProject);
+    console.log('[AutoCreate] Project created:', saved.name, saved.id);
+    
+    // Show notification
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icons/favicon.png'),
+      title: '📁 New Project Created',
+      message: `"${saved.name}" — Resources from ${domain} will be saved here`,
+      priority: 1
+    });
+    
+    return saved.id;
+  } catch (error) {
+    console.error('[AutoCreate] Failed:', error);
+    return null;
+  }
+}
+
+function getRandomColor() {
+  const colors = ['#F5A623', '#4CAF50', '#2196F3', '#9C27B0', '#E57373', '#FF9800', '#00BCD4'];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
 
 export { handleSaveCommand };

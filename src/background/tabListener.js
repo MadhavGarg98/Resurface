@@ -1,94 +1,152 @@
-import { getProjects } from '../utils/storage.js';
-import { matchUrl } from '../utils/urlMatcher.js';
+import { getProjects, getResources } from '../utils/storage';
 
-// Track tabs where sidebar is already shown to avoid duplicates
-const shownTabs = new Set();
+const shownTabs = {};
 
 export function init() {
+  console.log('[TabListener] Starting...');
+
   chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (changeInfo.status !== 'complete') return;
-    if (!tab.url || tab.url.startsWith('chrome://')) return;
+    if (!tab.url || tab.url.startsWith('chrome')) return;
     
-    console.log(`[TabListener] Page complete: ${tab.url}`);
-    checkAndShowSidebar(tabId, tab.url);
-  });
-  
-  chrome.tabs.onRemoved.addListener((tabId) => {
-    shownTabs.delete(tabId);
+    console.log(`[TabListener] Page loaded: ${tab.url.substring(0, 60)}`);
+    
+    // Brief delay to ensure content script is loaded
+    setTimeout(() => checkPage(tabId, tab.url), 500);
   });
 
-  // HEARTBEAT: Listen for content scripts asking for a sidebar
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'CHECK_FOR_SIDEBAR' && sender.tab) {
-      console.log(`[TabListener] Heartbeat from tab ${sender.tab.id}: ${sender.tab.url}`);
-      checkAndShowSidebar(sender.tab.id, sender.tab.url);
-      sendResponse({ received: true });
+  // Listen for manual trigger from popup
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.action === 'TRIGGER_SIDEBAR') {
+      chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+        if (tabs[0]) {
+          await checkPage(tabs[0].id, tabs[0].url, true);
+          sendResponse({ ok: true });
+        }
+      });
+      return true;
     }
-    return true;
   });
-
-  console.log('[TabListener] Initialized');
 }
 
-async function checkAndShowSidebar(tabId, url) {
-  try {
-    const projects = await getProjects();
-    console.log(`[TabListener] Checking ${projects.length} projects for matches...`);
+async function checkPage(tabId, url, forceShow = false) {
+  // Check if sidebar is globally enabled
+  const result = await chrome.storage.local.get(['sidebarEnabled']);
+  const isEnabled = result.sidebarEnabled !== false; // Default to true
+  
+  if (!isEnabled && !forceShow) {
+    console.log('[TabListener] Sidebar is disabled in settings, skipping match');
+    return;
+  }
+
+  if (!forceShow && shownTabs[tabId]) return;
+  
+  const projects = await getProjects();
+  const resources = await getResources();
+  
+  if (resources.length === 0) {
+    console.log('[TabListener] No resources saved yet');
+    return;
+  }
+
+  // Find matching project
+  let bestMatch = null;
+  let bestScore = 0;
+
+  for (const project of projects) {
+    if (project.archived) continue;
     
-    let bestProject = null;
-    for (const project of projects) {
-      if (project.archived) continue;
-      
-      const patterns = project.relatedUrls || [];
-      console.log(`[TabListener] Testing project "${project.name}" against patterns:`, patterns);
-      
-      const isMatch = patterns.some(p => matchUrl(url, p));
-      if (isMatch) {
-        console.log(`[TabListener] MATCH FOUND: "${project.name}" matches "${url}"`);
-        bestProject = project;
-        break;
+    let score = 0;
+    const urlLower = url.toLowerCase();
+    const domain = new URL(url).hostname;
+
+    // Check related URLs (exact or wildcard match)
+    const relatedUrls = project.relatedUrls || [];
+    for (const pattern of relatedUrls) {
+      const cleanPattern = pattern.toLowerCase().replace(/\*/g, '');
+      if (urlLower.includes(cleanPattern) || domain.includes(cleanPattern)) {
+        score += 50;
       }
     }
-    
-    if (!bestProject) {
-      console.log(`[TabListener] No match found for ${url}`);
-      return;
-    }
-    
-    // Get resources
-    const { getResources } = await import('../utils/storage.js');
-    const resources = await getResources(bestProject.id);
-    const topResources = (resources || [])
-      .sort((a, b) => (b.accessCount || 0) - (a.accessCount || 0))
-      .slice(0, 3);
-    
-    console.log(`[TabListener] Injecting sidebar for "${bestProject.name}" with ${resources.length} total resources`);
-    
-    // Inject
-    chrome.scripting.executeScript({
-      target: { tabId },
-      func: (project, resources, totalCount) => {
-        if (window.__resurfaceShowSidebar) {
-          window.__resurfaceShowSidebar({ project, resources, totalResources: totalCount });
-        } else {
-          console.warn('Resurface: window.__resurfaceShowSidebar not found in page context');
-        }
-      },
-      args: [bestProject, topResources, resources.length]
-    }).catch(err => {
-      console.error(`[TabListener] Scripting error:`, err);
-    });
 
-    shownTabs.add(tabId);
-  } catch (error) {
-    console.error('[TabListener] Error in checkAndShowSidebar:', error);
+    // Check keywords in URL
+    const keywords = project.keywords || [];
+    for (const kw of keywords) {
+      if (urlLower.includes(kw.toLowerCase())) {
+        score += 20;
+      }
+    }
+
+    // Check project name in URL
+    if (urlLower.includes(project.name.toLowerCase())) {
+      score += 30;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = project;
+    }
+  }
+
+  // FORCE SHOW: Use best match or create a general match
+  if (forceShow && !bestMatch && resources.length > 0) {
+    bestMatch = {
+      id: 'general',
+      name: '📚 Your Resources',
+      color: '#F5A623',
+      keywords: [],
+      relatedUrls: []
+    };
+    bestScore = 10;
+  }
+
+  if (bestMatch && (bestScore > 0 || forceShow)) {
+    console.log(`[TabListener] Match found: ${bestMatch.name} (score: ${bestScore})`);
+    
+    const projectResources = bestMatch.id === 'general' 
+      ? resources.slice(0, 3) 
+      : resources.filter(r => r.projectId === bestMatch.id).slice(0, 3);
+    
+    if (projectResources.length === 0) {
+      // No resources for this project — show recent resources instead
+      const recentResources = resources.sort((a, b) => 
+        new Date(b.savedAt) - new Date(a.savedAt)
+      ).slice(0, 3);
+      
+      if (recentResources.length > 0) {
+        sendSidebarMessage(tabId, bestMatch, recentResources, resources.length);
+      }
+    } else {
+      sendSidebarMessage(tabId, bestMatch, projectResources, 
+        resources.filter(r => r.projectId === bestMatch.id).length);
+    }
+  } else {
+    console.log('[TabListener] No match found for this URL');
   }
 }
 
-export async function forceShowSidebar(tabId) {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab) {
-    shownTabs.delete(tab.id);
-    await checkAndShowSidebar(tab.id, tab.url);
-  }
+function sendSidebarMessage(tabId, project, resources, totalCount) {
+  const message = {
+    action: 'SHOW_SIDEBAR',
+    data: {
+      project: {
+        id: project.id,
+        name: project.name,
+        color: project.color || '#F5A623',
+        deadline: project.deadline || null
+      },
+      resources: resources,
+      totalResources: totalCount || resources.length,
+      unreadCount: resources.filter(r => r.readStatus === 'unread').length
+    }
+  };
+
+  chrome.tabs.sendMessage(tabId, message, (response) => {
+    if (chrome.runtime.lastError) {
+      console.log('[TabListener] Send failed (content script may not be ready):', chrome.runtime.lastError.message);
+    } else {
+      console.log('[TabListener] Sidebar sent successfully');
+      shownTabs[tabId] = true;
+    }
+  });
 }
