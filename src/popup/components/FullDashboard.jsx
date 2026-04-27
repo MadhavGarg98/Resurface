@@ -10,7 +10,7 @@ import {
   ChevronRight,
   TrendingUp
 } from 'lucide-react';
-import { getResources, getProjects, saveProject } from '../../utils/storage.js';
+import { getResources, getProjects, saveProject, deleteProject, updateProject, updateResource } from '../../utils/storage.js';
 import SearchBar from './SearchBar.jsx';
 import ProjectCard from './ProjectCard.jsx';
 import ResourceItem from './ResourceItem.jsx';
@@ -19,6 +19,7 @@ import CreateProjectModal from './CreateProjectModal.jsx';
 import Settings from './Settings.jsx';
 import StatsChart from './StatsChart.jsx';
 import ResourceDetailModal from './ResourceDetailModal.jsx';
+import ClassificationConfirm from './ClassificationConfirm.jsx';
 
 export default function FullDashboard() {
   const [view, setView] = useState('overview'); // overview, settings
@@ -28,14 +29,73 @@ export default function FullDashboard() {
   const [selectedResource, setSelectedResource] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [pendingClassification, setPendingClassification] = useState(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     const [p, r] = await Promise.all([getProjects(), getResources()]);
     setProjects(p);
     setResources(r);
+    
+    // Also check for pending classification
+    const result = await chrome.storage.local.get(['_pendingClassification']);
+    if (result._pendingClassification) {
+      setPendingClassification(result._pendingClassification);
+    }
+    
     setLoading(false);
   }, []);
+
+  const handleConfirmClassification = async (projectId, tags) => {
+    if (!pendingClassification) return;
+    
+    const { resource } = pendingClassification;
+    let resourceId = resource.id;
+    
+    // Fallback for resources saved before the fix
+    if (!resourceId) {
+      const all = await getResources();
+      const match = all.find(r => r.url === resource.url && r.title === resource.title);
+      if (match) resourceId = match.id;
+    }
+    
+    if (resourceId) {
+      await updateResource(resourceId, { 
+        projectId, 
+        tags: [...new Set([...(resource.tags || []), ...(tags || [])])],
+        _needsConfirmation: false,
+        _pendingClassification: null
+      });
+    }
+    
+    await chrome.storage.local.remove(['_pendingClassification']);
+    setPendingClassification(null);
+    await loadData();
+  };
+
+  const handleDismissClassification = async () => {
+    if (!pendingClassification) return;
+    
+    const { resource } = pendingClassification;
+    let resourceId = resource.id;
+    
+    if (!resourceId) {
+      const all = await getResources();
+      const match = all.find(r => r.url === resource.url && r.title === resource.title);
+      if (match) resourceId = match.id;
+    }
+    
+    if (resourceId) {
+      await updateResource(resourceId, { 
+        _needsConfirmation: false,
+        _pendingClassification: null
+      });
+    }
+    
+    await chrome.storage.local.remove(['_pendingClassification']);
+    setPendingClassification(null);
+    await loadData();
+  };
 
   useEffect(() => {
     loadData();
@@ -115,6 +175,19 @@ export default function FullDashboard() {
               exit={{ opacity: 0 }}
               className="space-y-10"
             >
+              <AnimatePresence>
+                {pendingClassification && (
+                  <div className="mb-10">
+                    <ClassificationConfirm
+                      classification={pendingClassification.classification}
+                      resource={pendingClassification.resource}
+                      onConfirm={handleConfirmClassification}
+                      onDismiss={handleDismissClassification}
+                    />
+                  </div>
+                )}
+              </AnimatePresence>
+
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white border border-[#F0EBD8] p-6 rounded-2xl shadow-sm flex items-center gap-5">
@@ -177,14 +250,30 @@ export default function FullDashboard() {
                   </button>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {projects.map(p => (
-                      <ProjectCard 
-                        key={p.id} 
-                        project={p} 
-                        resources={resources.filter(r => r.projectId === p.id)}
-                        onClick={() => setActiveProject(p)}
-                      />
-                    ))}
+                    {projects.map(p => {
+                      const projectResources = resources.filter(r => r.projectId === p.id);
+                      const unreadCount = projectResources.filter(r => r.readStatus === 'unread').length;
+                      
+                      return (
+                        <ProjectCard 
+                          key={p.id} 
+                          project={p} 
+                          resourceCount={projectResources.length}
+                          unreadCount={unreadCount}
+                          onDelete={async (projectId) => {
+                            console.log('[DASHBOARD] Delete called for:', projectId);
+                            await deleteProject(projectId);
+                            await loadData();
+                          }}
+                          onUpdate={async (projectId, updates) => {
+                            console.log('[DASHBOARD] Update called for:', projectId);
+                            await updateProject(projectId, updates);
+                            await loadData();
+                          }}
+                          onClick={() => setActiveProject(p)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </section>

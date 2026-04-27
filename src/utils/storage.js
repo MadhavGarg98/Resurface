@@ -43,48 +43,54 @@ export const saveProject = async (project) => {
 
 /**
  * Delete a project by ID
- * Also unassigns resources from this project (sets projectId to null)
  */
 export async function deleteProject(id) {
-  console.log('[Storage] Starting deleteProject for ID:', id);
   try {
-    if (!id) throw new Error('No project ID provided to deleteProject');
-
-    // 1. Get all projects
-    const result = await chrome.storage.local.get('projects');
-    console.log('[Storage] Current projects in storage:', result);
-    const projects = result.projects || [];
+    console.log('[STORAGE] deleteProject called with id:', id);
     
-    // 2. Filter out the deleted project
-    const initialCount = projects.length;
-    const filtered = projects.filter(p => p.id !== id);
-    console.log(`[Storage] Filtering: ${initialCount} -> ${filtered.length} projects`);
+    // Get current projects
+    const result = await chrome.storage.local.get(['projects']);
+    console.log('[STORAGE] Current projects from storage:', result);
     
-    // 3. Save updated projects list
-    await chrome.storage.local.set({ projects: filtered });
-    console.log('[Storage] Projects list updated successfully');
+    let projects = result.projects || [];
+    console.log('[STORAGE] Projects array length:', projects.length);
     
-    // 4. Get all resources and unassign them
-    const resResult = await chrome.storage.local.get('resources');
+    // Find the project to delete
+    const projectToDelete = projects.find(p => p.id === id);
+    console.log('[STORAGE] Project to delete:', projectToDelete);
+    
+    // Filter it out
+    const updatedProjects = projects.filter(p => p.id !== id);
+    console.log('[STORAGE] Projects after filter:', updatedProjects.length);
+    
+    // Save to storage
+    await chrome.storage.local.set({ projects: updatedProjects });
+    console.log('[STORAGE] Projects saved to storage');
+    
+    // Verify it saved
+    const verify = await chrome.storage.local.get(['projects']);
+    console.log('[STORAGE] Verification - projects now:', verify.projects?.length);
+    
+    // Also unassign resources from this project
+    const resResult = await chrome.storage.local.get(['resources']);
     const resources = resResult.resources || [];
-    console.log(`[Storage] Checking ${resources.length} resources for unassignment`);
     
-    let unassignedCount = 0;
     const updatedResources = resources.map(r => {
       if (r.projectId === id) {
-        unassignedCount++;
         return { ...r, projectId: null };
       }
       return r;
     });
     
-    // 5. Save updated resources
     await chrome.storage.local.set({ resources: updatedResources });
-    console.log(`[Storage] Unassigned ${unassignedCount} resources successfully`);
+    console.log('[STORAGE] Resources updated - unassigned from deleted project');
     
-    return true;
+    return { success: true };
+    
   } catch (error) {
-    console.error('[Storage] CRITICAL ERROR in deleteProject:', error);
+    console.error('[STORAGE] Delete failed with error:', error);
+    console.error('[STORAGE] Error message:', error.message);
+    console.error('[STORAGE] Error stack:', error.stack);
     throw error;
   }
 }
@@ -94,7 +100,7 @@ export async function deleteProject(id) {
  */
 export async function updateProject(id, updates) {
   try {
-    console.log('[Storage] Updating project:', id, updates);
+    console.log('[STORAGE] Updating project:', id, updates);
     
     const result = await chrome.storage.local.get('projects');
     const projects = result.projects || [];

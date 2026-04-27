@@ -17,6 +17,17 @@ chrome.commands.onCommand.addListener(async (command) => {
 initContextMenus();
 initTabListener();
 initAlarms();
-initMessageHandler();
+// Handle notification button clicks
+chrome.notifications.onButtonClicked.addListener((notificationId) => {
+  if (notificationId.startsWith('help-categorize-')) {
+    // Open the popup (note: openPopup only works in some contexts, but let's try)
+    if (chrome.action.openPopup) {
+      chrome.action.openPopup();
+    } else {
+      // Fallback: open full dashboard
+      chrome.tabs.create({ url: 'src/popup/dashboard.html' });
+    }
+  }
+});
 
 console.log('All background modules initialized');

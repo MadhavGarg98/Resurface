@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Pencil, Trash2, X, Check } from 'lucide-react';
 
-export default function ProjectCard({ 
-  project, 
-  resourceCount, 
-  unreadCount, 
-  onDelete, 
-  onUpdate,
-  onClick 
-}) {
+export default function ProjectCard(props) {
+  const { 
+    project, 
+    resourceCount, 
+    unreadCount, 
+    onDelete, 
+    onUpdate,
+    onClick 
+  } = props;
+  
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(project.name || '');
@@ -47,15 +49,27 @@ export default function ProjectCard({
 
   // Handle delete
   const handleDelete = async () => {
+    console.log('[PROJECTCARD] Delete button clicked for project:', project.id);
+    console.log('[PROJECTCARD] Type of onDelete prop:', typeof onDelete);
+    
+    // Check if onDelete exists and is a function
+    if (!onDelete || typeof onDelete !== 'function') {
+      console.error('[PROJECTCARD] CRITICAL: onDelete is not a function!', onDelete);
+      alert('Cannot delete: Delete function not available. Please reload the page.');
+      return;
+    }
+    
     setIsDeleting(true);
+    
     try {
       await onDelete(project.id);
       setShowDeleteConfirm(false);
     } catch (error) {
-      console.error('Delete failed:', error);
+      console.error('[PROJECTCARD] Delete FAILED:', error);
       alert('Failed to delete project. Please try again.');
+    } finally {
+      setIsDeleting(false);
     }
-    setIsDeleting(false);
   };
 
   // Handle save edit
@@ -65,7 +79,18 @@ export default function ProjectCard({
       return;
     }
     
+    console.log('[PROJECTCARD] Save edit clicked');
+    console.log('[PROJECTCARD] Type of onUpdate prop:', typeof onUpdate);
+    
+    // Check if onUpdate exists
+    if (!onUpdate || typeof onUpdate !== 'function') {
+      console.error('[PROJECTCARD] CRITICAL: onUpdate is not a function!', onUpdate);
+      alert('Cannot update: Update function not available. Please reload the page.');
+      return;
+    }
+    
     setIsSaving(true);
+    
     try {
       const updates = {
         name: editName.trim(),
@@ -78,10 +103,11 @@ export default function ProjectCard({
       await onUpdate(project.id, updates);
       setIsEditing(false);
     } catch (error) {
-      console.error('Update failed:', error);
+      console.error('[PROJECTCARD] Update FAILED:', error);
       alert('Failed to update project. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   const colorOptions = ['#F5A623', '#4CAF50', '#2196F3', '#9C27B0', '#E57373', '#FF9800', '#00BCD4', '#607D8B'];
@@ -96,7 +122,6 @@ export default function ProjectCard({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-3">
-          {/* Project Name */}
           <div>
             <label className="text-xs font-medium text-[#6B6B6B] block mb-1">Project Name *</label>
             <input
@@ -108,32 +133,26 @@ export default function ProjectCard({
               autoFocus
             />
           </div>
-
-          {/* Keywords */}
           <div>
-            <label className="text-xs font-medium text-[#6B6B6B] block mb-1">Keywords (comma separated)</label>
+            <label className="text-xs font-medium text-[#6B6B6B] block mb-1">Keywords</label>
             <input
               type="text"
               value={editKeywords}
               onChange={(e) => setEditKeywords(e.target.value)}
               className="w-full h-9 px-3 text-sm bg-white border border-[#E5DFC8] rounded-lg focus:outline-none focus:border-[#F5A623] text-[#1A1A1A]"
-              placeholder="e.g., hackathon, pitch, sponsor"
+              placeholder="e.g., hackathon, pitch"
             />
           </div>
-
-          {/* Related URLs */}
           <div>
-            <label className="text-xs font-medium text-[#6B6B6B] block mb-1">Related URLs (comma separated)</label>
+            <label className="text-xs font-medium text-[#6B6B6B] block mb-1">Related URLs</label>
             <input
               type="text"
               value={editUrls}
               onChange={(e) => setEditUrls(e.target.value)}
               className="w-full h-9 px-3 text-sm bg-white border border-[#E5DFC8] rounded-lg focus:outline-none focus:border-[#F5A623] text-[#1A1A1A]"
-              placeholder="e.g., github.com/user/*, figma.com/*"
+              placeholder="e.g., wikipedia.org"
             />
           </div>
-
-          {/* Deadline */}
           <div>
             <label className="text-xs font-medium text-[#6B6B6B] block mb-1">Deadline</label>
             <input
@@ -143,8 +162,6 @@ export default function ProjectCard({
               className="w-full h-9 px-3 text-sm bg-white border border-[#E5DFC8] rounded-lg focus:outline-none focus:border-[#F5A623] text-[#1A1A1A]"
             />
           </div>
-
-          {/* Color Picker */}
           <div>
             <label className="text-xs font-medium text-[#6B6B6B] block mb-1">Color</label>
             <div className="flex gap-2 flex-wrap">
@@ -160,19 +177,13 @@ export default function ProjectCard({
               ))}
             </div>
           </div>
-
-          {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
             <button
               onClick={handleSaveEdit}
               disabled={isSaving}
               className="flex-1 h-9 bg-[#F5A623] text-white text-sm font-medium rounded-lg hover:bg-[#E09510] disabled:opacity-50 flex items-center justify-center gap-1"
             >
-              {isSaving ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Check className="w-4 h-4" />
-              )}
+              {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-4 h-4" />}
               Save
             </button>
             <button
@@ -200,20 +211,13 @@ export default function ProjectCard({
         <div className="text-center">
           <div className="text-3xl mb-2">🗑️</div>
           <p className="text-sm font-medium text-[#1A1A1A] mb-1">Delete "{project.name}"?</p>
-          <p className="text-xs text-[#6B6B6B] mb-3">
-            Resources will be unassigned but not deleted.
-          </p>
           <div className="flex gap-2">
             <button
               onClick={handleDelete}
               disabled={isDeleting}
               className="flex-1 h-9 bg-[#E57373] text-white text-sm font-medium rounded-lg hover:bg-[#EF5350] disabled:opacity-50 flex items-center justify-center"
             >
-              {isDeleting ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                'Delete'
-              )}
+              {isDeleting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Delete'}
             </button>
             <button
               onClick={() => setShowDeleteConfirm(false)}
@@ -227,55 +231,22 @@ export default function ProjectCard({
     );
   }
 
-  // NORMAL VIEW
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ y: -2 }}
       className="bg-white border border-[#F0EBD8] rounded-xl p-4 shadow-sm hover:shadow-md cursor-pointer transition-all group"
       style={{ borderLeftWidth: '4px', borderLeftColor: projectColor }}
       onClick={onClick}
     >
-      {/* Header Row */}
       <div className="flex items-start justify-between mb-2">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-[#1A1A1A] truncate">
-            {project.name || 'Untitled Project'}
-          </h3>
-        </div>
-        
-        {/* Action Icons — visible on hover */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+        <h3 className="text-sm font-semibold text-[#1A1A1A] truncate">{project.name || 'Untitled'}</h3>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => {
               e.stopPropagation();
-              try {
-                setEditName(project.name || '');
-                setEditKeywords((project.keywords || []).join(', '));
-                setEditUrls((project.relatedUrls || []).join(', '));
-                
-                // Safe date parsing
-                let dateStr = '';
-                if (project.deadline) {
-                  try {
-                    const d = new Date(project.deadline);
-                    if (!isNaN(d.getTime())) {
-                      dateStr = d.toISOString().split('T')[0];
-                    }
-                  } catch (e) { console.warn('Invalid deadline:', project.deadline); }
-                }
-                setEditDeadline(dateStr);
-                setEditColor(project.color || '#F5A623');
-                setIsEditing(true);
-              } catch (err) {
-                console.error('Failed to open edit mode:', err);
-              }
+              setIsEditing(true);
             }}
-            className="p-1.5 rounded-lg hover:bg-[#FFF8E7] text-[#9B9B9B] hover:text-[#F5A623] transition-colors"
-            title="Edit project"
+            className="p-1.5 rounded-lg hover:bg-[#FFF8E7] text-[#9B9B9B] hover:text-[#F5A623]"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
@@ -284,65 +255,24 @@ export default function ProjectCard({
               e.stopPropagation();
               setShowDeleteConfirm(true);
             }}
-            className="p-1.5 rounded-lg hover:bg-[#FFEBEE] text-[#9B9B9B] hover:text-[#E57373] transition-colors"
-            title="Delete project"
+            className="p-1.5 rounded-lg hover:bg-[#FFEBEE] text-[#9B9B9B] hover:text-[#E57373]"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
-
-      {/* Deadline */}
       {deadlineInfo && (
-        <div 
-          className="text-xs font-medium mb-2 inline-block px-2 py-0.5 rounded-full"
-          style={{ 
-            color: deadlineInfo.color, 
-            backgroundColor: deadlineInfo.color === '#E57373' ? '#FFEBEE' : 
-                           deadlineInfo.color === '#F5A623' ? '#FFF8E7' : '#E8F5E9'
-          }}
-        >
+        <div className="text-xs font-medium mb-2 inline-block px-2 py-0.5 rounded-full" style={{ color: deadlineInfo.color, backgroundColor: deadlineInfo.color === '#E57373' ? '#FFEBEE' : '#FFF8E7' }}>
           ⏰ {deadlineInfo.text}
         </div>
       )}
-
-      {/* Stats */}
       <div className="flex items-center justify-between text-xs text-[#9B9B9B] mb-2">
-        <span>{resourceCount || 0} resource{(resourceCount || 0) !== 1 ? 's' : ''}</span>
-        {unreadCount > 0 && (
-          <span className="text-[#F5A623] font-medium">{unreadCount} unread</span>
-        )}
+        <span>{resourceCount || 0} resources</span>
+        {unreadCount > 0 && <span className="text-[#F5A623] font-medium">{unreadCount} unread</span>}
       </div>
-
-      {/* Progress Bar */}
       {resourceCount > 0 && (
         <div className="w-full h-1.5 bg-[#F0EBD8] rounded-full overflow-hidden">
-          <div 
-            className="h-full rounded-full transition-all duration-500"
-            style={{ 
-              width: `${progress}%`,
-              backgroundColor: progress === 100 ? '#4CAF50' : projectColor
-            }}
-          />
-        </div>
-      )}
-
-      {/* Keywords preview */}
-      {project.keywords && project.keywords.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {project.keywords.slice(0, 3).map((keyword, i) => (
-            <span 
-              key={i}
-              className="text-[10px] px-1.5 py-0.5 bg-[#FFF8E7] text-[#F5A623] rounded-full"
-            >
-              {keyword}
-            </span>
-          ))}
-          {project.keywords.length > 3 && (
-            <span className="text-[10px] text-[#9B9B9B]">
-              +{project.keywords.length - 3} more
-            </span>
-          )}
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: progress === 100 ? '#4CAF50' : projectColor }} />
         </div>
       )}
     </motion.div>

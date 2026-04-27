@@ -158,13 +158,63 @@ async function handleSaveCommand() {
     chrome.notifications.clear('save-progress');
     
     // ==========================================
-    // STEP 6: CATEGORIZE
+    // STEP 5.5: PRE-ASSIGN IDENTITY
+    // ==========================================
+    resource.id = uuidv4();
+    resource.savedAt = new Date().toISOString();
+
+    // ==========================================
+    // STEP 6: CATEGORIZE (UPDATED)
     // ==========================================
     try {
-      const categorization = await categorizeResource(resource.title, resource.textContent);
-      if (categorization) {
-        resource.projectId = categorization.projectId;
-        resource.tags = categorization.tags || [];
+      const classification = await categorizeResource(resource);
+      
+      if (classification.shouldAskUser) {
+        // Don't auto-assign — send classification to popup for user confirmation
+        resource.projectId = null; // Will be set after user confirms
+        resource._pendingClassification = classification;
+        resource._needsConfirmation = true;
+        
+        // Show in-page categorization popup
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['src/content/categorizationPopup.js']
+          });
+          
+          chrome.tabs.sendMessage(tab.id, {
+            action: 'SHOW_CLASSIFICATION_POPUP',
+            data: { resource, classification }
+          });
+        } catch (err) {
+          console.warn('Could not show in-page categorization popup:', err);
+          
+          // Fallback: Show a notification that user needs to confirm
+          chrome.notifications.create('help-categorize-' + resource.id, {
+            type: 'basic',
+            iconUrl: chrome.runtime.getURL('icons/icon-48.png'),
+            title: '🤔 Help categorize this save',
+            message: `Where should "${resource.title?.substring(0, 60)}" go?`,
+            priority: 1,
+            buttons: [
+              { title: '📁 Categorize Now' }
+            ]
+          });
+        }
+        
+        // Store temporary data for when user opens popup
+        await chrome.storage.local.set({ 
+          _pendingClassification: {
+            resource,
+            classification,
+            timestamp: Date.now()
+          }
+        });
+        
+      } else {
+        // High confidence — auto-assign
+        resource.projectId = classification.projectId;
+        resource.tags = [...new Set([...(resource.tags || []), ...classification.suggestedTags])];
       }
     } catch (error) {
       console.warn('Categorization failed:', error);
@@ -186,8 +236,6 @@ async function handleSaveCommand() {
     // STEP 8: FINALIZE & SAVE
     // ==========================================
     console.log('Step 3: Building resource object');
-    resource.id = uuidv4();
-    resource.savedAt = new Date().toISOString();
     resource.lastAccessed = null;
     resource.accessCount = 0;
     resource.readStatus = 'unread';
@@ -212,8 +260,10 @@ async function handleSaveCommand() {
       priority: 1
     });
 
-    // Also show in-page toast for absolute certainty
-    await showInPageToast(tab.id, 'Saved to Resurface', summaryPreview || resource.title);
+    // Also show in-page toast for absolute certainty (only if not confirming)
+    if (!resource._needsConfirmation) {
+      await showInPageToast(tab.id, 'Saved to Resurface', summaryPreview || resource.title);
+    }
     
   } catch (error) {
     console.error('Save failed:', error);

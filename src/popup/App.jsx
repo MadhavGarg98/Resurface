@@ -1,15 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings as SettingsIcon, LayoutGrid, ArrowLeft, ExternalLink, Database } from 'lucide-react';
 import QuickPopupSearchBar from './components/QuickPopupSearchBar.jsx';
 import QuickSaveButton from './components/QuickSaveButton.jsx';
 import RecentResourcesList from './components/RecentResourcesList.jsx';
 import Settings from './components/Settings.jsx';
+import ClassificationConfirm from './components/ClassificationConfirm.jsx';
 import { openFullDashboard } from '../utils/navigation.js';
+import { updateResource } from '../utils/storage.js';
 
 export default function App() {
   const [view, setView] = useState('main'); // main, settings, detail
   const [selectedResource, setSelectedResource] = useState(null);
+  const [pendingClassification, setPendingClassification] = useState(null);
+
+  useEffect(() => {
+    // Check for pending classification
+    chrome.storage.local.get(['_pendingClassification'], (result) => {
+      if (result._pendingClassification) {
+        setPendingClassification(result._pendingClassification);
+      }
+    });
+  }, []);
+
+  const handleConfirmClassification = async (projectId, tags) => {
+    if (!pendingClassification) return;
+    
+    const { resource } = pendingClassification;
+    let resourceId = resource.id;
+    
+    // Fallback for resources saved before the fix (match by URL and Title)
+    if (!resourceId) {
+      const { getResources } = await import('../utils/storage.js');
+      const all = await getResources();
+      const match = all.find(r => r.url === resource.url && r.title === resource.title);
+      if (match) resourceId = match.id;
+    }
+    
+    if (resourceId) {
+      await updateResource(resourceId, { 
+        projectId, 
+        tags: [...new Set([...(resource.tags || []), ...(tags || [])])],
+        _needsConfirmation: false,
+        _pendingClassification: null
+      });
+    }
+    
+    // Clear pending state
+    await chrome.storage.local.remove(['_pendingClassification']);
+    setPendingClassification(null);
+    
+    // Refresh the list
+    window.dispatchEvent(new CustomEvent('resource-updated'));
+  };
+
+  const handleDismissClassification = async () => {
+    if (!pendingClassification) return;
+    
+    const { resource } = pendingClassification;
+    let resourceId = resource.id;
+    
+    if (!resourceId) {
+      const { getResources } = await import('../utils/storage.js');
+      const all = await getResources();
+      const match = all.find(r => r.url === resource.url && r.title === resource.title);
+      if (match) resourceId = match.id;
+    }
+    
+    if (resourceId) {
+      await updateResource(resourceId, { 
+        _needsConfirmation: false,
+        _pendingClassification: null
+      });
+    }
+    
+    await chrome.storage.local.remove(['_pendingClassification']);
+    setPendingClassification(null);
+  };
 
   const handleResultClick = (resource) => {
     setSelectedResource(resource);
@@ -58,6 +125,17 @@ export default function App() {
           >
             <QuickPopupSearchBar onResultClick={handleResultClick} />
             
+            <AnimatePresence>
+              {pendingClassification && (
+                <ClassificationConfirm
+                  classification={pendingClassification.classification}
+                  resource={pendingClassification.resource}
+                  onConfirm={handleConfirmClassification}
+                  onDismiss={handleDismissClassification}
+                />
+              )}
+            </AnimatePresence>
+
             <QuickSaveButton />
 
             <div className="flex-1 overflow-hidden flex flex-col">

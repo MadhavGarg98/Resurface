@@ -41,10 +41,33 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
   };
 
   const handleDeleteProject = async (projectId) => {
-    console.log('[Dashboard] Deleting project:', projectId);
-    await deleteProject(projectId);
-    await loadData();
-    console.log('[Dashboard] Project deleted, data refreshed');
+    console.log('[DASHBOARD] handleDeleteProject called with:', projectId);
+    
+    try {
+      console.log('[DASHBOARD] Calling deleteProject from storage...');
+      await deleteProject(projectId);
+      console.log('[DASHBOARD] deleteProject completed successfully');
+      
+      // Reload data
+      console.log('[DASHBOARD] Reloading data...');
+      const updatedProjects = await getProjects();
+      const updatedResources = await getResources();
+      
+      console.log('[DASHBOARD] Updated projects:', updatedProjects.length);
+      console.log('[DASHBOARD] Updated resources:', updatedResources.length);
+      
+      // Update state
+      setProjects(updatedProjects);
+      setResources(updatedResources);
+      
+      console.log('[DASHBOARD] State updated - project should be gone');
+      
+    } catch (error) {
+      console.error('[DASHBOARD] Delete failed:', error);
+      console.error('[DASHBOARD] Error name:', error.name);
+      console.error('[DASHBOARD] Error message:', error.message);
+      throw error; // Let the ProjectCard catch this and show error
+    }
   };
 
   const handleUpdateProject = async (projectId, updates) => {
@@ -169,8 +192,32 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
                       resourceCount={projectResources.length}
                       unreadCount={unreadCount}
                       onClick={() => onProjectClick(p)}
-                      onUpdate={handleUpdateProject}
-                      onDelete={handleDeleteProject}
+                      onDelete={async (projectId) => {
+                        console.log('[DASHBOARD] Delete handler called for:', projectId);
+                        try {
+                          await deleteProject(projectId);
+                          const freshProjects = await getProjects();
+                          const freshResources = await getResources();
+                          setProjects(freshProjects);
+                          setResources(freshResources);
+                        } catch (error) {
+                          console.error('Delete failed:', error);
+                          throw error;
+                        }
+                      }}
+                      onUpdate={async (projectId, updates) => {
+                        console.log('[DASHBOARD] Update handler called for:', projectId, updates);
+                        try {
+                          await updateProject(projectId, updates);
+                          const freshProjects = await getProjects();
+                          const freshResources = await getResources();
+                          setProjects(freshProjects);
+                          setResources(freshResources);
+                        } catch (error) {
+                          console.error('Update failed:', error);
+                          throw error;
+                        }
+                      }}
                     />
                   );
                 })}
