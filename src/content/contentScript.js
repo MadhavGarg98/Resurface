@@ -112,7 +112,7 @@
     
     // Premium Circle Design
     Object.assign(chatBtn.style, {
-      position: 'fixed', bottom: '24px', right: '24px', width: '60px', height: '60px',
+      position: 'fixed', bottom: '20px', right: '20px', width: '48px', height: '48px',
       background: 'linear-gradient(135deg, #FFF9EB 0%, #FFE0A3 100%)',
       borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
       cursor: 'grab', boxShadow: '0 8px 24px rgba(245, 166, 35, 0.2)', zIndex: '2147483645',
@@ -124,7 +124,7 @@
     chatBtn.innerHTML = `
       <img 
         src="${chrome.runtime.getURL('icons/favicon.png')}" 
-        style="width: 32px; height: 32px; object-fit: contain;" 
+        style="width: 24px; height: 24px; object-fit: contain;" 
         alt="" 
       />
     `;
@@ -216,7 +216,7 @@
     panel.innerHTML = `
       <div style="padding: 16px; border-bottom: 1px solid #F0EBD8; background: #FFF; font-weight: 800; display: flex; justify-content: space-between; align-items: center; color: #1A1A1A;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <div style="width: 8px; height: 8px; background: #F5A623; border-radius: 50%;"></div>
+          <img src="${chrome.runtime.getURL('icons/favicon.png')}" style="width: 16px; height: 16px; object-fit: contain;" alt="" />
           Resurface Assistant
         </div>
         <button onclick="this.closest('#resurface-chat-panel').remove()" style="background:none; border:none; cursor:pointer; color: #9B9B9B; font-size: 18px;">✕</button>

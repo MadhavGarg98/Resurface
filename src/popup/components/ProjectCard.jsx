@@ -7,10 +7,15 @@ export default function ProjectCard(props) {
     project, 
     resourceCount, 
     unreadCount, 
-    onDelete, 
-    onUpdate,
-    onClick 
+    onDelete = () => console.warn('[PROJECTCARD] onDelete missing in props!'), 
+    onUpdate = () => console.warn('[PROJECTCARD] onUpdate missing in props!'),
+    onClick = () => {} 
   } = props;
+  
+  // Log for debugging
+  if (!props.onDelete) {
+    console.warn('[PROJECTCARD] Rendered without onDelete for project:', project?.id, project?.name);
+  }
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);

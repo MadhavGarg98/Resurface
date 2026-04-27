@@ -22,7 +22,7 @@ function showResurfaceCategorizationPopup(resource, classification) {
     pointerEvents: 'none'
   });
 
-  let timeLeft = 8;
+  let timeLeft = 25;
   let selectedProjectId = classification.projectId || (classification.alternatives?.[0]?.projectId) || null;
   let isCreating = false;
   let showAllOptions = false;
@@ -55,8 +55,9 @@ function showResurfaceCategorizationPopup(resource, classification) {
         <!-- AI Decision -->
         <div style="display: flex; gap: 10px; margin-bottom: 14px;">
           <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 700; color: #1A1A1A; font-size: 13px; display: flex; align-items: center; gap: 6px;">
-              🤔 ${classification.projectId ? 'Project Suggestion' : 'Where to save?'}
+            <div style="font-weight: 700; color: #1A1A1A; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+              <img src="${chrome.runtime.getURL('icons/favicon.png')}" style="width: 16px; height: 16px; object-fit: contain;" alt="" />
+              ${classification.projectId ? 'Project Suggestion' : 'Where to save?'}
             </div>
             <div style="font-size: 11px; color: #6B6B6B; margin-top: 4px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
               ${classification.reasoning || 'AI is classifying this resource...'}
@@ -68,7 +69,7 @@ function showResurfaceCategorizationPopup(resource, classification) {
              <svg width="32" height="32" viewBox="0 0 32 32">
                 <circle cx="16" cy="16" r="14" fill="none" stroke="#F0EBD8" stroke-width="2.5" />
                 <circle cx="16" cy="16" r="14" fill="none" stroke="#F5A623" stroke-width="2.5" 
-                        stroke-dasharray="88" stroke-dashoffset="${88 * (1 - timeLeft / 8)}" 
+                        stroke-dasharray="88" stroke-dashoffset="${88 * (1 - timeLeft / 25)}" 
                         stroke-linecap="round" transform="rotate(-90 16 16)" 
                         style="transition: stroke-dashoffset 1s linear;" />
              </svg>

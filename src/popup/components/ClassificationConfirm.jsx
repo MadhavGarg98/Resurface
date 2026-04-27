@@ -19,7 +19,7 @@ export default function ClassificationConfirm({
     classification.projectId || (classification.alternatives?.[0]?.projectId) || null
   );
   const [showAllOptions, setShowAllOptions] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(8);
+  const [timeLeft, setTimeLeft] = useState(25);
   const [isCreating, setIsCreating] = useState(false);
   
   // Auto-dismiss timer
@@ -50,7 +50,11 @@ export default function ClassificationConfirm({
     >
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
-        <div className="text-2xl">🤔</div>
+        <img 
+          src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
+          className="w-10 h-10 object-contain flex-shrink-0" 
+          alt="AI Assistant" 
+        />
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-[#1A1A1A]">
             {classification.projectId ? 'Add to this project?' : 'Where should this go?'}

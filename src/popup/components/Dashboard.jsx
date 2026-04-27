@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, LayoutGrid } from 'lucide-react';
-import { getProjects, getResources, saveProject, updateResource, deleteResource, deleteProject } from '../../utils/storage.js';
+import { Plus, LayoutGrid, Zap } from 'lucide-react';
+import { getProjects, getResources, saveProject, updateResource, deleteResource, deleteProject, updateProject } from '../../utils/storage.js';
 import { smartSearch } from '../../utils/smartSearch.js';
 import ProjectCard from './ProjectCard.jsx';
 import ResourceItem from './ResourceItem.jsx';
