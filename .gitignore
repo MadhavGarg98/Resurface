@@ -3,3 +3,21 @@ dist
 .env
 *.log
 .DS_Store
+
+# Code Review Graph - generated files and cache
+.code-review-graph/
+.code-review-graph.db
+.code-review-graph.cache
+*.crg
+*.crg.json
+
+# Configuration files (AI assistant generated)
+.cursorrules
+.claude/
+.kiro/
+.mcp.json
+.opencode.json
+.windsurfrules
+AGENTS.md
+CLAUDE.md
+GEMINI.md

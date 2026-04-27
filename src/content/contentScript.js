@@ -120,11 +120,13 @@
       border: '2px solid #F5A623'
     });
     
-    // Resurface Bolt Logo
+    // Resurface Favicon Logo
     chatBtn.innerHTML = `
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="#F5A623">
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-      </svg>
+      <img 
+        src="${chrome.runtime.getURL('icons/favicon.png')}" 
+        style="width: 32px; height: 32px; object-fit: contain;" 
+        alt="" 
+      />
     `;
     
     // Hover Effects

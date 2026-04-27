@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Zap, 
+import {
   Settings as SettingsIcon, 
   Package, 
   Folder, 
@@ -110,7 +109,11 @@ export default function FullDashboard() {
 
   if (loading) return (
     <div className="min-h-screen bg-[#FFFDF7] flex items-center justify-center">
-      <Zap className="w-12 h-12 text-[#F5A623] animate-pulse" />
+      <img 
+        src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
+        className="w-12 h-12 object-contain animate-pulse" 
+        alt="Loading..." 
+      />
     </div>
   );
 
@@ -118,11 +121,13 @@ export default function FullDashboard() {
     <div className="min-h-screen bg-[#FFFDF7] font-sans selection:bg-[#FFF8E7]">
       {/* Top Nav */}
       <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#F0EBD8] z-50 px-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#F5A623] rounded-lg flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white fill-current" />
-          </div>
-          <h1 className="text-xl font-bold text-[#1A1A1A] tracking-tight">Resurface</h1>
+        <div className="flex items-center gap-3">
+          <img 
+            src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
+            className="w-8 h-8 object-contain" 
+            alt="Resurface Logo" 
+          />
+          <h1 className="text-2xl font-black text-[#1A1A1A] tracking-tight">Resurface</h1>
         </div>
         
         <div className="flex items-center gap-4">

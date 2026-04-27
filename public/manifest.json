@@ -24,7 +24,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/popup/dashboard.html", "src/popup/dashboard.jsx", "assets/*"],
+      "resources": [
+        "src/popup/dashboard.html", 
+        "src/popup/dashboard.jsx", 
+        "assets/*",
+        "icons/*"
+      ],
       "matches": ["<all_urls>"]
     }
   ],
@@ -45,8 +50,8 @@
     }
   ],
   "icons": {
-    "16": "icons/icon-16.png",
-    "48": "icons/icon-48.png",
-    "128": "icons/icon-128.png"
+    "16": "icons/favicon.png",
+    "48": "icons/favicon.png",
+    "128": "icons/favicon.png"
   }
 }

@@ -12,7 +12,13 @@ function createChatButton() {
   // Create floating button
   chatButton = document.createElement('div');
   chatButton.id = 'resurface-chat-button';
-  chatButton.innerHTML = '💬';
+  chatButton.innerHTML = `
+    <img 
+      src="${chrome.runtime.getURL('icons/favicon.png')}" 
+      style="width: 28px; height: 28px; object-fit: contain;" 
+      alt="" 
+    />
+  `;
   chatButton.title = 'Ask Resurface about your saved resources';
   
   chatButton.addEventListener('click', toggleChat);
@@ -37,7 +43,10 @@ function openChat() {
   chatElement.id = 'resurface-mini-chat';
   chatElement.innerHTML = `
     <div class="rmc-header">
-      <span>💬 Ask Resurface</span>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <img src="${chrome.runtime.getURL('icons/favicon.png')}" style="width: 16px; height: 16px;" alt="" />
+        <span>Ask Resurface</span>
+      </div>
       <button class="rmc-close" id="rmc-close">✕</button>
     </div>
     <div class="rmc-messages" id="rmc-messages">

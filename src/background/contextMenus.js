@@ -20,7 +20,7 @@ export function init() {
     // Create "Save to Resurface" menu item
     chrome.contextMenus.create({
       id: 'resurface-save',
-      title: '📎 Resurface — Save This Page',
+      title: 'Resurface — Save This Page',
       contexts: ['page']
     });
     
@@ -67,7 +67,7 @@ async function handleSummarizeSelection(info, tab) {
     
     chrome.notifications.create('summary-result', {
       type: 'basic',
-      iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
+      iconUrl: chrome.runtime.getURL('icons/favicon.png'),
       title: '📝 Summary Results',
       message: bulletText || 'Could not generate summary.',
       priority: 2,
@@ -121,7 +121,7 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
 function showSystemNotification(title, message, id = null) {
   const options = {
     type: 'basic',
-    iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
+    iconUrl: chrome.runtime.getURL('icons/favicon.png'),
     title: title,
     message: message,
     priority: 1

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zap, Loader2, Check } from 'lucide-react';
+import { Loader2, Check, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function QuickSaveButton() {
@@ -18,7 +18,11 @@ export default function QuickSaveButton() {
     <button
       onClick={handleSave}
       disabled={status === 'saving'}
-      className="w-full bg-[#F5A623] hover:bg-[#E09512] text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#F5A623]/20 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-80"
+      className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold transition-all shadow-lg ${
+        status === 'saved' 
+          ? 'bg-green-500 text-white shadow-green-500/20' 
+          : 'bg-[#F5A623] hover:bg-[#E09512] text-white shadow-[#F5A623]/20'
+      }`}
     >
       <AnimatePresence mode="wait">
         {status === 'saving' ? (
@@ -41,13 +45,13 @@ export default function QuickSaveButton() {
           </motion.div>
         ) : (
           <motion.div
-            key="idle"
+            key="default"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-3"
           >
-            <Zap className="w-5 h-5 fill-current" />
+            <Save className="w-5 h-5" />
             <span>Save Current Page</span>
           </motion.div>
         )}

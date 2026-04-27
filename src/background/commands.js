@@ -103,7 +103,7 @@ async function handleSaveCommand() {
       // Show "analyzing" notification
       chrome.notifications.create('save-progress', {
         type: 'basic',
-        iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
+        iconUrl: chrome.runtime.getURL('icons/favicon.png'),
         title: 'Resurface',
         message: 'AI is analyzing your content...',
         priority: 0
@@ -192,7 +192,7 @@ async function handleSaveCommand() {
           // Fallback: Show a notification that user needs to confirm
           chrome.notifications.create('help-categorize-' + resource.id, {
             type: 'basic',
-            iconUrl: chrome.runtime.getURL('icons/icon-48.png'),
+            iconUrl: chrome.runtime.getURL('icons/favicon.png'),
             title: '🤔 Help categorize this save',
             message: `Where should "${resource.title?.substring(0, 60)}" go?`,
             priority: 1,
@@ -254,7 +254,7 @@ async function handleSaveCommand() {
     
     chrome.notifications.create({
       type: 'basic',
-      iconUrl: resource.sourceFavicon || chrome.runtime.getURL('icons/icon-128.png'),
+      iconUrl: resource.sourceFavicon || chrome.runtime.getURL('icons/favicon.png'),
       title: 'Saved to Resurface',
       message: summaryPreview || resource.title || 'Resource saved!',
       priority: 1
@@ -524,7 +524,7 @@ function shouldGenerateBullets(resource) {
 function showNotification(title, message) {
   chrome.notifications.create({
     type: 'basic',
-    iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
+    iconUrl: chrome.runtime.getURL('icons/favicon.png'),
     title: title,
     message: message,
     priority: 1

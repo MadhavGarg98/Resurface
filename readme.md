@@ -237,9 +237,8 @@ resurface-extension/
 │
 ├── public/
 │   └── icons/
-│       ├── icon-16.png              # Toolbar icon (16x16)
-│       ├── icon-48.png              # Extension management icon
-│       └── icon-128.png             # Web Store listing icon
+│       ├── favicon.png              # Standard project favicon & extension icon
+│       └── ...                      # Legacy icons (icon-16, icon-48, icon-128)
 │
 ├── src/
 │   ├── background/                  # Service Worker (persistent background)

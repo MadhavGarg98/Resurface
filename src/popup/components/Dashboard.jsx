@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, LayoutGrid, Zap } from 'lucide-react';
+import { Plus, LayoutGrid } from 'lucide-react';
 import { getProjects, getResources, saveProject, updateResource, deleteResource, deleteProject } from '../../utils/storage.js';
 import { smartSearch } from '../../utils/smartSearch.js';
 import ProjectCard from './ProjectCard.jsx';
@@ -118,8 +118,12 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
     <div className="space-y-8 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-white flex items-center gap-2">
-            <Zap className="w-6 h-6 text-blue-500 fill-blue-500" /> Resurface
+          <h1 className="text-2xl font-black text-white flex items-center gap-3">
+            <img 
+              src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
+              className="w-8 h-8 object-contain" 
+              alt="" 
+            /> Resurface
           </h1>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">
             {resources.length} resources &middot; {projects.length} projects
@@ -253,7 +257,11 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
                 {resources.length === 0 && (
                   <div className="text-center py-12 px-6">
                     <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <Zap className="w-8 h-8 text-slate-600" />
+                      <img 
+                        src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
+                        className="w-8 h-8 object-contain" 
+                        alt="" 
+                      />
                     </div>
                     <p className="text-slate-400 text-sm font-medium">Your world is full of things to remember.</p>
                     <p className="text-slate-500 text-xs mt-2">Press <kbd className="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700">Ctrl+Shift+S</kbd> to save anything.</p>

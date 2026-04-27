@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   X, 
   ExternalLink, 
   Clock, 
@@ -9,7 +9,6 @@ import {
   Calendar,
   CheckCircle,
   Trash2,
-  Zap,
   ChevronRight
 } from 'lucide-react';
 import { deleteResource } from '../../utils/storage.js';
@@ -100,12 +99,22 @@ export default function ResourceDetailModal({ resource, project, isOpen, onClose
 
               {/* AI Summary Card */}
               <section className="bg-white border border-[#F0EBD8] rounded-2xl p-6 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <Zap size={64} className="text-[#F5A623] fill-current" />
+                <div className="absolute top-0 right-0 p-4 opacity-5">
+                  <img 
+                    src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
+                    style={{ width: 80, height: 80 }} 
+                    className="object-contain grayscale" 
+                    alt="" 
+                  />
                 </div>
                 <div className="relative">
                   <div className="flex items-center gap-2 text-[#F5A623] mb-4">
-                    <Zap size={18} className="fill-current" />
+                    <img 
+                      src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
+                      style={{ width: 20, height: 20 }} 
+                      className="object-contain" 
+                      alt="" 
+                    />
                     <h3 className="text-xs font-black uppercase tracking-widest">AI Summary</h3>
                   </div>
                   <p className="text-lg text-[#1A1A1A] leading-relaxed font-medium italic">
