@@ -12,9 +12,17 @@ const COLORS = [
   '#64B5F6', // Blue
   '#4DB6AC', // Teal
   '#81C784', // Green
+  '#AED581', // Light Green
+  '#DCE775', // Lime
   '#FFF176', // Yellow
+  '#FFD54F', // Amber
   '#FFB74D', // Orange
-  '#FF8A65'  // Deep Orange
+  '#FF8A65', // Deep Orange
+  '#A1887F', // Brown
+  '#90A4AE', // Blue Gray
+  '#4FC3F7', // Sky Blue
+  '#4DB6AC', // Cyan
+  '#CE93D8', // Light Purple
 ];
 
 export default function CreateProjectModal({ isOpen, onClose, onSave, initialData = null }) {

@@ -7,7 +7,8 @@ import {
   Clock, 
   Plus, 
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  Layers
 } from 'lucide-react';
 import { getResources, getProjects, saveProject, deleteProject, updateProject, updateResource } from '../../utils/storage.js';
 import SearchBar from './SearchBar.jsx';
@@ -22,7 +23,7 @@ import ClassificationConfirm from './ClassificationConfirm.jsx';
 import FloatingNavBar from './FloatingNavBar.jsx';
 
 export default function FullDashboard() {
-  const [view, setView] = useState('overview'); // overview, settings, projects
+  const [view, setView] = useState('overview'); // overview, settings, projects, library
   const [resources, setResources] = useState([]);
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
@@ -175,6 +176,56 @@ export default function FullDashboard() {
                 <Settings />
               </div>
             </motion.div>
+          ) : view === 'library' ? (
+            <motion.div
+              key="library-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+            >
+              <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <h2 className="text-3xl font-bold text-[#3D3832] mb-2">Library</h2>
+                  <p className="text-[#A8A29E]">Browse and manage all your saved resources in one place.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setView('overview')}
+                    className="px-4 py-2 bg-white border border-[#E8E2D6] rounded-xl text-sm font-bold text-[#3D3832] hover:bg-[#FAF8F5] transition-colors flex items-center gap-2"
+                  >
+                    <ChevronRight size={16} className="rotate-180" />
+                    Back to Dashboard
+                  </button>
+                </div>
+              </div>
+
+              {/* Library Search */}
+              <div className="mb-8 bg-white border border-[#E8E2D6] p-1.5 rounded-2xl shadow-sm">
+                <SearchBar 
+                  isFullPage={true} 
+                  onResultClick={(r) => setSelectedResource(r)} 
+                />
+              </div>
+              
+              <div className="space-y-4">
+                {resources.length === 0 ? (
+                  <div className="text-center py-20 bg-white border border-dashed border-[#E8E2D6] rounded-2xl">
+                    <Layers size={48} className="mx-auto text-[#E8E2D6] mb-4" />
+                    <p className="text-[#A8A29E] font-medium">Your library is empty. Save some resources to get started!</p>
+                  </div>
+                ) : (
+                  resources.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).map(res => (
+                    <ResourceItem 
+                      key={res.id} 
+                      resource={res} 
+                      project={projects.find(p => p.id === res.projectId)}
+                      onUpdate={loadData}
+                      onOpen={(r) => setSelectedResource(r)}
+                    />
+                  ))
+                )}
+              </div>
+            </motion.div>
           ) : view === 'projects' ? (
             <motion.div
               key="projects-view"
@@ -297,7 +348,7 @@ export default function FullDashboard() {
               </div>
 
               {/* Search Section */}
-              <div className="bg-white border border-[#E8E2D6] p-2 rounded-2xl shadow-sm">
+              <div className="bg-white border border-[#E8E2D6] p-1.5 rounded-2xl shadow-sm">
                 <SearchBar 
                   isFullPage={true} 
                   onResultClick={(r) => setSelectedResource(r)} 
@@ -350,14 +401,17 @@ export default function FullDashboard() {
               <section>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold text-[#3D3832]">Recently Saved</h3>
-                  <div className="flex items-center gap-1 text-xs font-bold text-[#A8A29E] hover:text-[#C49A6C] cursor-pointer group">
+                  <div 
+                    onClick={() => setView('library')}
+                    className="flex items-center gap-1 text-xs font-bold text-[#A8A29E] hover:text-[#C49A6C] cursor-pointer group"
+                  >
                     <span>See All</span>
                     <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </div>
                 
                 <div className="space-y-4">
-                  {resources.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).slice(0, 8).map(res => (
+                  {resources.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).slice(0, 5).map(res => (
                     <ResourceItem 
                       key={res.id} 
                       resource={res} 
@@ -399,7 +453,7 @@ export default function FullDashboard() {
       />
 
       <FloatingNavBar 
-        currentView={view === 'settings' ? 'settings' : (view === 'projects' ? 'projects' : (activeProject ? '' : 'dashboard'))} 
+        currentView={view === 'settings' ? 'settings' : (view === 'projects' ? 'projects' : (view === 'library' ? 'library' : (activeProject ? '' : 'dashboard')))} 
         setView={(v) => {
           setView(v === 'overview' ? 'overview' : v);
           setActiveProject(null);

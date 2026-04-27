@@ -28,6 +28,14 @@
   * {
     font-family: 'Outfit', sans-serif !important;
   }
+
+  input:focus, 
+  textarea:focus, 
+  select:focus, 
+  button:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
 }
 
 @layer components {

@@ -20,7 +20,7 @@ export default function QuickSaveButton() {
       disabled={status === 'saving'}
       className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold transition-all shadow-lg ${
         status === 'saved' 
-          ? 'bg-green-600 text-white shadow-green-600/20' 
+          ? 'bg-[#81C784] text-white shadow-[#81C784]/20' 
           : 'bg-[#C49A6C] hover:bg-[#3D3832] text-white shadow-[#C49A6C]/20'
       }`}
     >

@@ -86,7 +86,8 @@
         />
         <button id="rmc-send" class="rmc-send-btn">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m3 22 1-1 18-9-18-9-1 1 2 8h10"></path>
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
           </svg>
         </button>
       </div>
@@ -200,6 +201,8 @@
     const styles = document.createElement('style');
     styles.id = 'resurface-chat-styles';
     styles.textContent = `
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+      
       #resurface-chat-button {
         position: fixed; bottom: 24px; right: 24px;
         width: 56px; height: 56px; background: #FFFFFF;
@@ -218,7 +221,7 @@
         border: 1px solid #E8E2D6; border-radius: 24px;
         box-shadow: 0 12px 48px rgba(61, 56, 50, 0.15);
         z-index: 2147483646; display: flex; flex-direction: column;
-        overflow: hidden; font-family: system-ui, -apple-system, sans-serif;
+        overflow: hidden; font-family: 'Outfit', system-ui, -apple-system, sans-serif;
         animation: rsSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       }
       @keyframes rsSlideUp { from { opacity:0; transform:translateY(30px) scale(0.95); } to { opacity:1; transform:translateY(0) scale(1); } }

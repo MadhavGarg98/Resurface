@@ -5,7 +5,8 @@ import {
   Compass,
   LayoutGrid,
   Folder,
-  Plus
+  Plus,
+  Layers
 } from 'lucide-react';
 
 export default function FloatingNavBar({ currentView, setView, onNewProject }) {
@@ -30,6 +31,12 @@ export default function FloatingNavBar({ currentView, setView, onNewProject }) {
       icon: <SettingsIcon size={22} />, 
       label: 'Settings', 
       onClick: () => { setView('settings'); setIsOpen(false); } 
+    },
+    { 
+      id: 'library', 
+      icon: <Layers size={22} />, 
+      label: 'Library', 
+      onClick: () => { setView('library'); setIsOpen(false); } 
     },
     { 
       id: 'new-project', 

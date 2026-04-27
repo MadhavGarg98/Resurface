@@ -45,7 +45,7 @@ export default function SearchBar({ isFullPage, onResultClick }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={isFullPage ? "Search your saved resources... try 'what was that API article?'" : "Search resources..."}
-          className={`w-full bg-transparent border-none py-4 pl-12 pr-24 text-base focus:outline-none placeholder:text-[#A8A29E] font-medium text-[#3D3832]`}
+          className={`w-full bg-transparent border-0 outline-none py-3 pl-12 pr-24 text-base focus:outline-none focus-visible:outline-none focus:ring-0 focus:bg-[#C49A6C]/5 rounded-xl transition-colors duration-300 placeholder:text-[#A8A29E] font-medium text-[#3D3832]`}
         />
 
         <div className="absolute right-4 flex items-center gap-2">

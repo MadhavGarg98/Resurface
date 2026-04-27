@@ -50,6 +50,8 @@
     
     sidebarElement.innerHTML = `
       <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+        
         #resurface-sidebar {
           position: fixed; top: 50%; right: 24px; width: 340px; 
           max-height: 70vh; background: #FFFDF7; 
@@ -57,7 +59,7 @@
           box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12); z-index: 2147483646;
           transform: translateY(-50%) translateX(120%); 
           transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
-          font-family: system-ui, -apple-system, sans-serif; 
+          font-family: 'Outfit', system-ui, -apple-system, sans-serif; 
           display: flex; flex-direction: column; overflow: hidden;
           opacity: 0;
         }
