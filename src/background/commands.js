@@ -28,6 +28,7 @@ import { detectPageType } from '../utils/pageTypeDetector.js';
 import { generateSummary, generateBulletSummary } from '../utils/summarizer.js';
 import { categorizeResource } from '../utils/categorizer.js';
 import { extractDeadline } from '../utils/deadlineParser.js';
+import { findMatchingProject } from '../utils/projectMatcher.js';
 
 // Main save handler — called when user presses Ctrl+Shift+S
 async function handleSaveCommand() {
@@ -168,69 +169,51 @@ async function handleSaveCommand() {
     resource.savedAt = new Date().toISOString();
 
     // ==========================================
-    // STEP 6: CATEGORIZE (UPDATED)
+    // STEP 6: INTELLIGENT CATEGORIZATION
     // ==========================================
     try {
-      const classification = await categorizeResource(resource);
+      // 6.1 Fast Match (Local)
+      const localMatch = await findMatchingProject(resource);
       
-      if (classification.shouldAskUser) {
-        // Don't auto-assign — send classification to popup for user confirmation
-        resource.projectId = null; // Will be set after user confirms
-        resource._pendingClassification = classification;
-        resource._needsConfirmation = true;
-        
-        // Show in-page categorization popup
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['src/content/categorizationPopup.js']
-          });
-          
-          chrome.tabs.sendMessage(tab.id, {
-            action: 'SHOW_CLASSIFICATION_POPUP',
-            data: { resource, classification }
-          });
-        } catch (err) {
-          console.warn('Could not show in-page categorization popup:', err);
-          
-          // Fallback: Show a notification that user needs to confirm
-          chrome.notifications.create('help-categorize-' + resource.id, {
-            type: 'basic',
-            iconUrl: chrome.runtime.getURL('icons/favicon.png'),
-            title: '🤔 Help categorize this save',
-            message: `Where should "${resource.title?.substring(0, 60)}" go?`,
-            priority: 1,
-            buttons: [
-              { title: '📁 Categorize Now' }
-            ]
-          });
-        }
-        
-        // Store temporary data for when user opens popup
-        await chrome.storage.local.set({ 
-          _pendingClassification: {
-            resource,
-            classification,
-            timestamp: Date.now()
-          }
-        });
-        
+      if (localMatch.confidence >= 80 && localMatch.projectId) {
+        resource.projectId = localMatch.projectId;
+        console.log(`[Save] Fast Match: ${localMatch.projectName}`);
       } else {
-        // High confidence — auto-assign
-        resource.projectId = classification.projectId;
-        resource.tags = [...new Set([...(resource.tags || []), ...classification.suggestedTags])];
+        // AI consultation (optional, but let's keep it if confident)
+        const aiMatch = await categorizeResource(resource);
+        
+        if (aiMatch.decision === 'MATCH' && aiMatch.confidence >= 85) {
+          resource.projectId = aiMatch.projectId;
+        } else {
+          // No confident match — trigger project creation popup
+          resource.projectId = null;
+          resource._needsConfirmation = true;
+          
+          // Generate suggested project
+          const suggested = {
+            name: getSuggestedProjectName(tab.url),
+            keywords: getSuggestedKeywords(resource),
+            relatedUrls: getSuggestedUrls(tab.url)
+          };
+          
+          // Send popup to the page
+          try {
+            await chrome.tabs.sendMessage(tab.id, {
+              action: 'SHOW_PROJECT_POPUP',
+              data: {
+                resource: { ...resource, id: resource.id || uuidv4() }, // Ensure ID for the popup
+                suggestedProject: suggested
+              }
+            });
+            console.log('[Save] Project creation popup sent');
+          } catch (e) {
+            console.warn('[Save] Could not show popup:', e.message);
+          }
+        }
       }
-      
-      // ==========================================
-      // STEP 6.5: AUTO-CREATE PROJECT IF NEEDED
-      // ==========================================
-      const finalProjectId = await autoCreateProjectIfNeeded(resource, classification, tab);
-      resource.projectId = finalProjectId || resource.projectId;
-      
     } catch (error) {
-      console.warn('Categorization failed:', error);
+      console.warn('Categorization pipeline failed:', error);
       resource.projectId = null;
-      resource.tags = [];
     }
     
     // ==========================================
@@ -251,6 +234,33 @@ async function handleSaveCommand() {
     resource.accessCount = 0;
     resource.readStatus = 'unread';
     
+    // ==========================================
+    // STEP 7.5: DUPLICATE CHECK
+    // ==========================================
+    const duplicate = await checkDuplicateResource(resource.url, resource.projectId);
+    if (duplicate) {
+      const { updateResource } = await import('../utils/storage.js');
+      await updateResource(duplicate.id, {
+        accessCount: (duplicate.accessCount || 0) + 1,
+        lastAccessed: new Date().toISOString(),
+        textContent: resource.textContent || duplicate.textContent,
+        summary: resource.summary || duplicate.summary
+      });
+      
+      if (!resource._needsConfirmation) {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: chrome.runtime.getURL('icons/favicon.png'),
+          title: '📎 Already Saved',
+          message: `This page was saved earlier. Updated with latest content.`,
+          priority: 0
+        });
+      }
+      
+      console.log('Duplicate found, updated instead of creating new resource');
+      return;
+    }
+
     console.log('Step 4: Saving to storage...', resource);
     await saveResource(resource);
     console.log('Step 5: Saved successfully!');
@@ -258,21 +268,20 @@ async function handleSaveCommand() {
     // Clear progress notification if it exists
     chrome.notifications.clear('save-progress');
     
-    // Show success notification
-    const summaryPreview = resource.summary 
-      ? resource.summary.substring(0, 100) + (resource.summary.length > 100 ? '...' : '')
-      : '';
-    
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: resource.sourceFavicon || chrome.runtime.getURL('icons/favicon.png'),
-      title: 'Saved to Resurface',
-      message: summaryPreview || resource.title || 'Resource saved!',
-      priority: 1
-    });
-
-    // Also show in-page toast for absolute certainty (only if not confirming)
+    // Show success notification ONLY if not confirming
     if (!resource._needsConfirmation) {
+      const summaryPreview = resource.summary 
+        ? resource.summary.substring(0, 100) + (resource.summary.length > 100 ? '...' : '')
+        : '';
+      
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: resource.sourceFavicon || chrome.runtime.getURL('icons/favicon.png'),
+        title: 'Saved to Resurface',
+        message: summaryPreview || resource.title || 'Resource saved!',
+        priority: 1
+      });
+
       await showInPageToast(tab.id, 'Saved to Resurface', summaryPreview || resource.title);
     }
     
@@ -756,6 +765,26 @@ async function showInPageToast(tabId, title, message, type = 'success') {
   }
 }
 
+async function checkDuplicateResource(url, projectId) {
+  if (!url) return null;
+  
+  try {
+    const { getResources } = await import('../utils/storage.js');
+    const allResources = await getResources();
+    
+    // Check if same URL was saved to this project in the last 24 hours
+    const duplicate = allResources.find(r => 
+      r.url === url && 
+      r.projectId === projectId &&
+      r.savedAt > new Date(Date.now() - 86400000).toISOString()
+    );
+    
+    return duplicate || null;
+  } catch (e) {
+    return null;
+  }
+}
+
 async function autoCreateProjectIfNeeded(resource, classification, tab) {
   // If high confidence match exists, use it
   if (classification && classification.confidence >= 70 && classification.projectId) {
@@ -811,9 +840,83 @@ async function autoCreateProjectIfNeeded(resource, classification, tab) {
   }
 }
 
-function getRandomColor() {
-  const colors = ['#F5A623', '#4CAF50', '#2196F3', '#9C27B0', '#E57373', '#FF9800', '#00BCD4'];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
+// ==========================================
+// POPUP MESSAGE HANDLERS
+// ==========================================
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'CONFIRM_CLASSIFICATION') {
+    const { resourceId, projectId, tags } = msg.data;
+    import('../utils/storage.js').then(storage => {
+      storage.updateResource(resourceId, { 
+        projectId, 
+        tags: tags || [], 
+        _needsConfirmation: false 
+      }).then(() => sendResponse({ ok: true }));
+    });
+    return true;
+  }
+  
+  if (msg.action === 'CREATE_PROJECT_AND_ASSIGN') {
+    const { name, keywords, resourceId, tags } = msg.data;
+    
+    import('../utils/storage.js').then(async (storage) => {
+      const newProj = await storage.saveProject({
+        id: uuidv4(),
+        name,
+        keywords: keywords || [],
+        archived: false,
+        createdAt: new Date().toISOString(),
+        color: '#F5A623'
+      });
+      
+      await storage.updateResource(resourceId, {
+        projectId: newProj.id,
+        tags: tags || [],
+        _needsConfirmation: false
+      });
+      
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+
+  if (msg.action === 'DISMISS_CLASSIFICATION') {
+    const { resourceId } = msg.data;
+    import('../utils/storage.js').then(storage => {
+      storage.updateResource(resourceId, { _needsConfirmation: false })
+        .then(() => sendResponse({ ok: true }));
+    });
+    return true;
+  }
+});
 
 export { handleSaveCommand };
+
+// Helper functions for project suggestions
+function getSuggestedProjectName(url) {
+  try {
+    const domain = new URL(url).hostname.replace('www.', '').split('.')[0];
+    return domain.charAt(0).toUpperCase() + domain.slice(1);
+  } catch {
+    return 'New Project';
+  }
+}
+
+function getSuggestedKeywords(resource) {
+  const words = (resource.title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 3)
+    .slice(0, 5);
+  return words;
+}
+
+function getSuggestedUrls(url) {
+  try {
+    const domain = new URL(url).hostname.replace('www.', '');
+    return [`${domain}/*`];
+  } catch {
+    return [];
+  }
+}

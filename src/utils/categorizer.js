@@ -2,302 +2,150 @@ import { callLLM } from './llmClient.js';
 import { getProjects } from './storage.js';
 
 /**
- * Categorize a resource to the correct project
- * 
- * @param {Object} resource - The resource being saved { title, textContent, url, tags }
- * @param {Array} projects - Available projects
- * @returns {Object} {
- *   projectId: string | null,
- *   confidence: number (0-100),
- *   suggestedTags: string[],
- *   matchedKeywords: string[],
- *   reasoning: string,
- *   alternatives: [{ projectId, projectName, confidence }],
- *   shouldAskUser: boolean,
- *   suggestedNewProject: { name, keywords, color } | null
- * }
+ * Intelligent Categorizer v2
+ * Determines if a resource should go to an existing project, a new project, or ask the user.
  */
 export async function categorizeResource(resource, projects = null) {
-  
-  // Get projects if not provided
   if (!projects) {
     projects = await getProjects();
   }
   
-  // If no projects exist, suggest creating one
+  // If no projects exist, we definitely want to suggest a new one
   if (!projects || projects.length === 0) {
-    return {
+    return await finalizeDecision({
+      decision: 'CREATE',
+      confidence: 100,
       projectId: null,
-      confidence: 0,
-      suggestedTags: [],
-      matchedKeywords: [],
-      reasoning: 'No projects exist yet',
-      alternatives: [],
-      shouldAskUser: true,
-      suggestedNewProject: await generateProjectSuggestion(resource)
-    };
+      reasoning: 'Initial project creation'
+    }, resource);
   }
   
-  // Build the prompt for AI classification
-  const prompt = buildClassificationPrompt(resource, projects);
+  const prompt = buildCategorizationPrompt(resource, projects);
   
   try {
     const result = await callLLM({
       messages: [{ role: 'user', content: prompt }],
-      maxTokens: 400,
-      temperature: 0.1 // Low temperature for consistent results
+      maxTokens: 500,
+      temperature: 0.1
     });
     
-    // Parse the AI response
-    const classification = parseClassificationResponse(result.text, projects);
-    
-    // Validate the classification
-    return validateClassification(classification, resource, projects);
+    const classification = parseCategorizationResponse(result.text, projects);
+    return await finalizeDecision(classification, resource);
     
   } catch (error) {
-    console.error('[Categorizer] AI classification failed:', error);
-    // Fallback: return low confidence, ask user
-    return {
-      projectId: null,
-      confidence: 0,
-      suggestedTags: [],
-      matchedKeywords: [],
-      reasoning: 'AI classification failed, needs manual assignment',
-      alternatives: projects.slice(0, 3).map(p => ({
-        projectId: p.id,
-        projectName: p.name,
-        confidence: 0
-      })),
-      shouldAskUser: true,
-      suggestedNewProject: null
-    };
+    console.error('[Categorizer] AI failed:', error);
+    return { decision: 'ASK', confidence: 0, projectId: null };
   }
 }
 
-/**
- * Build the classification prompt for the LLM
- */
-function buildClassificationPrompt(resource, projects) {
-  const projectList = projects.map((p, i) => {
-    return `Project ${i + 1}:
-  ID: "${p.id}"
-  Name: "${p.name}"
-  Keywords: [${(p.keywords || []).join(', ')}]
-  Related URLs: [${(p.relatedUrls || []).join(', ')}]
-  Description: "${p.description || 'No description'}"`;
-  }).join('\n\n');
+function buildCategorizationPrompt(resource, projects) {
+  const projectList = projects.map(p => 
+    `- ID: ${p.id}, Name: "${p.name}", Keywords: [${(p.keywords || []).join(', ')}]`
+  ).join('\n');
 
-  return `You are a precise resource classifier. Your job is to match a saved resource to the CORRECT project with high accuracy.
+  return `You are a precision AI librarian for the Resurface extension. 
+TASK: Decide where this web resource belongs.
 
-RESOURCE TO CLASSIFY:
-Title: "${resource.title || 'Untitled'}"
-URL: ${resource.url || 'N/A'}
-Content: "${(resource.textContent || '').substring(0, 1500)}"
-Existing Tags: [${(resource.tags || []).join(', ')}]
+RESOURCE:
+Title: "${resource.title}"
+URL: ${resource.url}
+Content Snippet: "${(resource.textContent || '').substring(0, 1000)}"
 
-AVAILABLE PROJECTS:
+EXISTING PROJECTS:
 ${projectList}
 
-INSTRUCTIONS:
-1. Carefully analyze the resource content and title
-2. Compare against each project's keywords, URLs, and name
-3. Find the BEST matching project — ONLY if there's a clear match
-4. If multiple projects could match, rank them by relevance
-5. If no project clearly matches, say so honestly
+DECISION RULES:
+1. MATCH: ONLY if the resource clearly and directly belongs to an existing project (90%+ confidence).
+2. CREATE: If no project matches, but you can confidently suggest a new, specific project name (e.g. "Mobile Technology").
+3. ASK: If you are confused, there are multiple matches, or the confidence is below 90%.
 
-CRITICAL RULES:
-- A resource about "cricket" should ONLY go to a cricket-related project
-- A resource about "football" should NOT go to a cricket project
-- If keywords overlap (e.g., "sports" matches multiple), look deeper at the actual content
-- If the resource is about a SPECIFIC topic, prefer the most specific project
-- Do NOT force a match if none exists — it's better to ask the user
+MANDATORY: If you choose CREATE or ASK, you MUST provide a "suggestedNewProject" object with a specific name and 3-5 relevant keywords.
 
-Return ONLY a JSON object (no markdown, no extra text):
+Return ONLY JSON:
 {
-  "bestMatch": {
-    "projectId": "id of best project or null",
-    "projectName": "name of best project",
-    "confidence": 85,
-    "reasoning": "Brief explanation of why this matches"
+  "decision": "MATCH" | "CREATE" | "ASK",
+  "confidence": 0-100,
+  "projectId": "matched_project_id_or_null",
+  "reasoning": "Explain exactly why this matches or why a new project is needed",
+  "suggestedNewProject": {
+    "name": "Specific Name (NOT 'New Project', use something like 'Mobile Tech')",
+    "keywords": ["tag1", "tag2", "tag3"],
+    "description": "Short purpose"
   },
-  "alternatives": [
-    { "projectId": "id", "projectName": "name", "confidence": 60 }
-  ],
-  "suggestedTags": ["tag1", "tag2", "tag3"],
-  "matchedKeywords": ["keyword1", "keyword2"],
-  "noGoodMatch": false,
-  "suggestNewProject": false,
-  "newProjectSuggestion": {
-    "name": "Suggested project name",
-    "keywords": ["keyword1", "keyword2"],
-    "description": "Brief description"
-  }
+  "suggestedTags": ["tag1", "tag2"]
 }`;
 }
 
-/**
- * Parse and validate the AI response
- */
-function parseClassificationResponse(responseText, projects) {
+function parseCategorizationResponse(text, projects) {
   try {
-    // Clean the response — remove markdown code blocks if present
-    let jsonStr = responseText.trim();
-    
-    // Remove ```json and ``` markers
-    jsonStr = jsonStr.replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
-    // Remove any leading/trailing single backticks
-    jsonStr = jsonStr.replace(/^`|`$/g, '');
-    
+    const jsonStr = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(jsonStr);
     
     return {
-      projectId: parsed.bestMatch?.projectId || null,
-      projectName: parsed.bestMatch?.projectName || '',
-      confidence: parsed.bestMatch?.confidence || 0,
-      reasoning: parsed.bestMatch?.reasoning || '',
-      alternatives: (parsed.alternatives || []).map(alt => ({
-        projectId: alt.projectId,
-        projectName: alt.projectName,
-        confidence: alt.confidence || 0
-      })),
-      suggestedTags: parsed.suggestedTags || [],
-      matchedKeywords: parsed.matchedKeywords || [],
-      noGoodMatch: parsed.noGoodMatch || false,
-      shouldAskUser: false, // Will be determined by validateClassification
-      suggestedNewProject: parsed.suggestNewProject ? {
-        name: parsed.newProjectSuggestion?.name || '',
-        keywords: parsed.newProjectSuggestion?.keywords || [],
-        description: parsed.newProjectSuggestion?.description || ''
-      } : null
+      decision: parsed.decision || 'ASK',
+      confidence: parsed.confidence || 0,
+      projectId: parsed.projectId,
+      reasoning: parsed.reasoning || '',
+      suggestedNewProject: parsed.suggestedNewProject,
+      suggestedTags: parsed.suggestedTags || []
     };
-    
-  } catch (error) {
-    console.error('[Categorizer] Failed to parse AI response:', error);
-    console.error('[Categorizer] Raw response:', responseText);
-    
-    return {
-      projectId: null,
-      confidence: 0,
-      reasoning: 'Failed to parse classification',
-      alternatives: [],
-      suggestedTags: [],
-      matchedKeywords: [],
-      noGoodMatch: true,
-      shouldAskUser: true,
-      suggestedNewProject: null
-    };
+  } catch (e) {
+    return { decision: 'ASK', confidence: 0 };
   }
 }
 
-/**
- * Validate classification and determine if we should ask the user
- */
-function validateClassification(classification, resource, projects) {
-  
-  // Find the matched project
-  const matchedProject = projects.find(p => p.id === classification.projectId);
-  
-  // ==========================================
-  // RULE 1: Confidence too low → Ask user
-  // ==========================================
-  if (classification.confidence < 60) {
-    classification.shouldAskUser = true;
-    classification.reasoning += ' (Low confidence — needs confirmation)';
-    return classification;
+async function finalizeDecision(c, resource) {
+  // Add safety buffer: if AI says MATCH but confidence < 90, switch to ASK
+  if (c.decision === 'MATCH' && c.confidence < 90) {
+    c.decision = 'ASK';
   }
   
-  // ==========================================
-  // RULE 2: Very high confidence → Auto-assign
-  // ==========================================
-  if (classification.confidence >= 90 && matchedProject) {
-    classification.shouldAskUser = false;
-    return classification;
+  // If AI says CREATE but confidence < 85, switch to ASK
+  if (c.decision === 'CREATE' && c.confidence < 85) {
+    c.decision = 'ASK';
   }
-  
-  // ==========================================
-  // RULE 3: Medium confidence (60-90%) → Quick confirm
-  // ==========================================
-  if (classification.confidence >= 60 && classification.confidence < 90) {
-    // Check if there's a close second choice
-    if (classification.alternatives.length > 0 && 
-        classification.alternatives[0].confidence >= classification.confidence - 15) {
-      // Close competition — ask user
-      classification.shouldAskUser = true;
-      classification.reasoning += ' (Multiple close matches — needs user choice)';
-    } else {
-      // Clear winner but not 100% sure — quick confirm
-      classification.shouldAskUser = true;
-      classification.reasoning += ' (Good match — quick confirmation recommended)';
+
+  // MANDATORY FALLBACK: Ensure suggestedNewProject exists and has a VALID name
+  if ((c.decision === 'ASK' || c.decision === 'CREATE')) {
+    if (!c.suggestedNewProject || !c.suggestedNewProject.name || c.suggestedNewProject.name.length < 2) {
+      console.log('[Categorizer] AI suggestion was weak/missing, generating fallback...');
+      c.suggestedNewProject = await generateProjectSuggestion(resource);
     }
-    return classification;
   }
-  
-  // ==========================================
-  // RULE 4: No good match → Offer to create project
-  // ==========================================
-  if (classification.noGoodMatch || !matchedProject) {
-    classification.shouldAskUser = true;
-    classification.suggestedNewProject = classification.suggestedNewProject || 
-      generateBasicSuggestion(resource);
-    return classification;
-  }
-  
-  // Default: ask user if unsure
-  classification.shouldAskUser = true;
-  return classification;
+
+  return c;
 }
 
-/**
- * Generate a project suggestion from resource content
- */
 export async function generateProjectSuggestion(resource) {
-  const prompt = `Based on this resource, suggest a project name and keywords:
-
-Title: "${resource.title || 'Untitled'}"
-Content: "${(resource.textContent || '').substring(0, 1000)}"
-
-Return JSON:
-{
-  "name": "Suggested project name (short, 2-4 words)",
-  "keywords": ["keyword1", "keyword2", "keyword3"],
-  "description": "One sentence describing the project scope",
-  "color": "#hexcolor"
-}`;
-
+  // Try AI first for a really good suggestion
   try {
+    const prompt = `Suggest a specific project name (2-3 words) and 5 keywords for this:
+    Title: "${resource.title}"
+    Snippet: "${(resource.textContent || '').substring(0, 500)}"
+    
+    Return JSON: { "name": "...", "keywords": ["...", "..."] }`;
+    
     const result = await callLLM({
       messages: [{ role: 'user', content: prompt }],
-      maxTokens: 200,
-      temperature: 0.3
+      maxTokens: 150
     });
     
-    const jsonStr = result.text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(jsonStr);
-    
+    const parsed = JSON.parse(result.text.replace(/```json|```/g, '').trim());
     return {
-      name: parsed.name || 'New Project',
+      name: parsed.name || resource.title.substring(0, 20),
       keywords: parsed.keywords || [],
-      description: parsed.description || '',
-      color: parsed.color || '#F5A623'
+      description: `Resources related to ${parsed.name || resource.title}`,
+      color: '#F5A623'
     };
-  } catch (error) {
+  } catch (e) {
+    // Basic fallback
+    const words = (resource.title || '').split(' ');
+    const name = words.slice(0, 3).join(' ') || 'New Topic';
     return {
-      name: resource.title?.substring(0, 30) || 'New Project',
+      name: name.substring(0, 40),
       keywords: resource.tags || [],
-      description: '',
+      description: `Project for: ${name}`,
       color: '#F5A623'
     };
   }
-}
-
-function generateBasicSuggestion(resource) {
-  const words = (resource.title || '').split(' ');
-  const name = words.slice(0, 3).join(' ') || 'New Project';
-  
-  return {
-    name: name.substring(0, 40),
-    keywords: resource.tags || [],
-    description: `Project for: ${name}`,
-    color: '#F5A623'
-  };
 }

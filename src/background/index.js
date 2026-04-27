@@ -32,3 +32,54 @@ chrome.notifications.onButtonClicked.addListener((notificationId) => {
 });
 
 console.log('All background modules initialized');
+
+// Handle messages from content script and popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('[Background] Message received:', message.action);
+
+  // Create project and assign resource
+  if (message.action === 'CREATE_PROJECT_AND_ASSIGN') {
+    handleCreateAndAssign(message.data)
+      .then(result => sendResponse(result))
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  // Assign resource to existing project
+  if (message.action === 'ASSIGN_TO_PROJECT') {
+    handleAssignProject(message.data)
+      .then(result => sendResponse(result))
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  return false;
+});
+
+async function handleCreateAndAssign(data) {
+  const { resourceId, projectName, keywords, relatedUrls } = data;
+  
+  const { saveProject } = await import('../utils/storage.js');
+  
+  const newProject = await saveProject({
+    name: projectName,
+    keywords: keywords || [],
+    relatedUrls: relatedUrls || [],
+    color: ['#F5A623','#4CAF50','#2196F3','#9C27B0','#E57373'][Math.floor(Math.random()*5)]
+  });
+  
+  // Assign resource
+  const { updateResource } = await import('../utils/storage.js');
+  await updateResource(resourceId, { projectId: newProject.id });
+  
+  console.log('[Background] Created project & assigned:', newProject.name);
+  return { success: true, projectId: newProject.id };
+}
+
+async function handleAssignProject(data) {
+  const { resourceId, projectId } = data;
+  const { updateResource } = await import('../utils/storage.js');
+  await updateResource(resourceId, { projectId });
+  console.log('[Background] Assigned to project:', projectId);
+  return { success: true };
+}

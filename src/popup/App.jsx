@@ -98,6 +98,14 @@ export default function App() {
     setView('detail');
   };
 
+  const triggerSidebar = () => {
+    chrome.runtime.sendMessage({ action: 'TRIGGER_SIDEBAR' }, (response) => {
+      if (response && response.ok) {
+        window.close(); // Close popup after summoning
+      }
+    });
+  };
+
   const testSave = async () => {
     const testResource = {
       id: 'test-' + Date.now(),
@@ -175,6 +183,13 @@ export default function App() {
               </button>
               
               <div className="flex items-center gap-1">
+                <button
+                  onClick={triggerSidebar}
+                  title="Summon Sidebar"
+                  className="p-1.5 text-[#A8A29E] hover:text-[#C49A6C] hover:bg-[#FAF8F5] rounded-lg transition-all"
+                >
+                  <Pin size={16} />
+                </button>
                 <button
                   onClick={testSave}
                   title="Diagnostic Save"

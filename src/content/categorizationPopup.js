@@ -12,6 +12,8 @@ function showResurfaceCategorizationPopup(resource, classification) {
   const container = document.createElement('div');
   container.id = 'resurface-cat-popup-container';
   
+  console.log('[Resurface] Showing categorization popup with data:', { resource, classification });
+  
   // Style container
   Object.assign(container.style, {
     position: 'fixed',
@@ -24,7 +26,7 @@ function showResurfaceCategorizationPopup(resource, classification) {
 
   let timeLeft = 25;
   let selectedProjectId = classification.projectId || (classification.alternatives?.[0]?.projectId) || null;
-  let isCreating = false;
+  let isCreating = classification.decision === 'CREATE';
   let showAllOptions = false;
 
   const confidenceColor = classification.confidence >= 90 ? '#C49A6C' :

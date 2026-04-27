@@ -20,7 +20,7 @@
     "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com;"
   },
   "background": {
-    "service_worker": "src/background/index.js",
+    "service_worker": "background.js",
     "type": "module"
   },
   "action": {
@@ -30,7 +30,6 @@
     {
       "resources": [
         "src/popup/dashboard.html", 
-        "src/popup/dashboard.jsx", 
         "assets/*",
         "icons/*"
       ],
@@ -49,7 +48,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/content/contentScript.js"],
+      "js": ["contentScript.js", "categorizationPopup.js", "chatBot.js"],
       "run_at": "document_idle"
     }
   ],

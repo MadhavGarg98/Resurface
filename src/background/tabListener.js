@@ -15,15 +15,24 @@ export function init() {
     setTimeout(() => checkPage(tabId, tab.url), 500);
   });
 
-  // Listen for manual trigger from popup
+  // Listen for trigger from popup or content script
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.action === 'TRIGGER_SIDEBAR') {
-      chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-        if (tabs[0]) {
-          await checkPage(tabs[0].id, tabs[0].url, true);
-          sendResponse({ ok: true });
-        }
-      });
+      const tabId = sender.tab ? sender.tab.id : null;
+      const url = sender.tab ? sender.tab.url : null;
+
+      if (tabId && url) {
+        // Triggered from content script
+        checkPage(tabId, url, false).then(() => sendResponse({ ok: true }));
+      } else {
+        // Triggered from popup
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+          if (tabs[0]) {
+            await checkPage(tabs[0].id, tabs[0].url, true);
+            sendResponse({ ok: true });
+          }
+        });
+      }
       return true;
     }
   });
@@ -50,49 +59,17 @@ async function checkPage(tabId, url, forceShow = false) {
   }
 
   // Find matching project
-  let bestMatch = null;
-  let bestScore = 0;
-
-  for (const project of projects) {
-    if (project.archived) continue;
-    
-    let score = 0;
-    const urlLower = url.toLowerCase();
-    const domain = new URL(url).hostname;
-
-    // Check related URLs (exact or wildcard match)
-    const relatedUrls = project.relatedUrls || [];
-    for (const pattern of relatedUrls) {
-      const cleanPattern = pattern.toLowerCase().replace(/\*/g, '');
-      if (urlLower.includes(cleanPattern) || domain.includes(cleanPattern)) {
-        score += 50;
-      }
-    }
-
-    // Check keywords in URL
-    const keywords = project.keywords || [];
-    for (const kw of keywords) {
-      if (urlLower.includes(kw.toLowerCase())) {
-        score += 20;
-      }
-    }
-
-    // Check project name in URL
-    if (urlLower.includes(project.name.toLowerCase())) {
-      score += 30;
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = project;
-    }
-  }
+  const { matchProject } = await import('../utils/projectMatcher.js');
+  const localMatch = await matchProject(url, projects, resources);
+  
+  let bestMatch = localMatch.projectId ? projects.find(p => p.id === localMatch.projectId) : null;
+  let bestScore = localMatch.confidence;
 
   // FORCE SHOW: Use best match or create a general match
   if (forceShow && !bestMatch && resources.length > 0) {
     bestMatch = {
       id: 'general',
-      name: '📚 Your Resources',
+      name: 'Your Resources',
       color: '#F5A623',
       keywords: [],
       relatedUrls: []
@@ -100,32 +77,27 @@ async function checkPage(tabId, url, forceShow = false) {
     bestScore = 10;
   }
 
-  if (bestMatch && (bestScore > 0 || forceShow)) {
-    console.log(`[TabListener] Match found: ${bestMatch.name} (score: ${bestScore})`);
+  if (bestMatch && (bestScore >= 30 || forceShow)) {
+    console.log(`[TabListener] Match found: ${bestMatch.name} (confidence: ${bestScore}%). Threshold: 30%`);
     
     const projectResources = bestMatch.id === 'general' 
       ? resources.slice(0, 3) 
       : resources.filter(r => r.projectId === bestMatch.id).slice(0, 3);
     
-    if (projectResources.length === 0) {
-      // No resources for this project — show recent resources instead
-      const recentResources = resources.sort((a, b) => 
-        new Date(b.savedAt) - new Date(a.savedAt)
-      ).slice(0, 3);
-      
-      if (recentResources.length > 0) {
-        sendSidebarMessage(tabId, bestMatch, recentResources, resources.length);
-      }
-    } else {
-      sendSidebarMessage(tabId, bestMatch, projectResources, 
-        resources.filter(r => r.projectId === bestMatch.id).length);
+    const resourcesToShow = projectResources.length > 0 
+      ? projectResources 
+      : resources.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).slice(0, 3);
+
+    if (resourcesToShow.length > 0) {
+      await sendSidebarMessage(tabId, bestMatch, resourcesToShow, resources.length);
     }
   } else {
     console.log('[TabListener] No match found for this URL');
   }
 }
 
-function sendSidebarMessage(tabId, project, resources, totalCount) {
+async function sendSidebarMessage(tabId, project, resources, totalCount) {
+  console.log(`[TabListener] Dispatching SHOW_SIDEBAR for project: ${project.name} to tab: ${tabId}`);
   const message = {
     action: 'SHOW_SIDEBAR',
     data: {
@@ -141,12 +113,25 @@ function sendSidebarMessage(tabId, project, resources, totalCount) {
     }
   };
 
-  chrome.tabs.sendMessage(tabId, message, (response) => {
-    if (chrome.runtime.lastError) {
-      console.log('[TabListener] Send failed (content script may not be ready):', chrome.runtime.lastError.message);
-    } else {
-      console.log('[TabListener] Sidebar sent successfully');
-      shownTabs[tabId] = true;
+  try {
+    await chrome.tabs.sendMessage(tabId, message);
+    console.log('[TabListener] Sidebar message sent successfully');
+    shownTabs[tabId] = true;
+  } catch (err) {
+    console.warn('[TabListener] Script missing, attempting re-injection...');
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['contentScript.js']
+      });
+      
+      // Wait a tiny bit for init
+      setTimeout(async () => {
+        await chrome.tabs.sendMessage(tabId, message);
+        shownTabs[tabId] = true;
+      }, 100);
+    } catch (injectErr) {
+      console.error('[TabListener] Re-injection failed:', injectErr);
     }
-  });
+  }
 }

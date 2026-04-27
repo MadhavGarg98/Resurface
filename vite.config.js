@@ -15,19 +15,18 @@ export default defineConfig({
         dashboard: fileURLToPath(new URL('./src/popup/dashboard.html', import.meta.url)),
         background: 'src/background/index.js',
         contentScript: 'src/content/contentScript.js',
-        categorizationPopup: 'src/content/categorizationPopup.js'
+        categorizationPopup: 'src/content/categorizationPopup.js',
+        chatBot: 'src/content/chatBot.js'
       },
       output: {
-        // Ensure background and contentScript are flat and easy to find
         entryFileNames: (chunkInfo) => {
-          if (chunkInfo.name === 'background') return 'src/background/index.js';
-          if (chunkInfo.name === 'contentScript') return 'src/content/contentScript.js';
-          if (chunkInfo.name === 'categorizationPopup') return 'src/content/categorizationPopup.js';
+          if (chunkInfo.name === 'background') return 'background.js';
+          if (chunkInfo.name === 'contentScript') return 'contentScript.js';
+          if (chunkInfo.name === 'categorizationPopup') return 'categorizationPopup.js';
+          if (chunkInfo.name === 'chatBot') return 'chatBot.js';
           return 'assets/[name]-[hash].js';
         },
-        // IMPORTANT: Content scripts cannot be ES modules in manifest.json
-        // We force them to be iife (immediately invoked function expression)
-        format: 'es', // background needs 'es' for type: module
+        format: 'es',
       }
     }
   }
