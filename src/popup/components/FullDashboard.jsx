@@ -19,9 +19,10 @@ import Settings from './Settings.jsx';
 import StatsChart from './StatsChart.jsx';
 import ResourceDetailModal from './ResourceDetailModal.jsx';
 import ClassificationConfirm from './ClassificationConfirm.jsx';
+import FloatingNavBar from './FloatingNavBar.jsx';
 
 export default function FullDashboard() {
-  const [view, setView] = useState('overview'); // overview, settings
+  const [view, setView] = useState('overview'); // overview, settings, projects
   const [resources, setResources] = useState([]);
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
@@ -29,6 +30,8 @@ export default function FullDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingClassification, setPendingClassification] = useState(null);
+
+  const timeSaved = Math.round((resources.length * 5) / 60);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -105,10 +108,19 @@ export default function FullDashboard() {
     await loadData();
   };
 
-  const timeSaved = Math.round(resources.length * 3.5); // Mock metric: 3.5 mins per resource
+  const scrollToProjects = () => {
+    setView('overview');
+    setActiveProject(null);
+    setTimeout(() => {
+      const element = document.getElementById('projects-grid');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
 
   if (loading) return (
-    <div className="min-h-screen bg-[#FFFDF7] flex items-center justify-center">
+    <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center">
       <img 
         src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
         className="w-12 h-12 object-contain animate-pulse" 
@@ -118,25 +130,22 @@ export default function FullDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-[#FFFDF7] font-sans selection:bg-[#FFF8E7]">
+    <div className="min-h-screen bg-[#FAF8F5] font-sans selection:bg-[#C49A6C]/20">
       {/* Top Nav */}
-      <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#F0EBD8] z-50 px-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-[#E8E2D6] z-50 px-8 flex items-center justify-between">
+        <div 
+          className="flex items-center gap-3 cursor-pointer group"
+          onClick={() => {
+            setView('overview');
+            setActiveProject(null);
+          }}
+        >
           <img 
             src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
-            className="w-8 h-8 object-contain" 
+            className="w-10 h-10 object-contain transition-transform group-hover:scale-110" 
             alt="Resurface Logo" 
           />
-          <h1 className="text-2xl font-black text-[#1A1A1A] tracking-tight">Resurface</h1>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setView(view === 'settings' ? 'overview' : 'settings')}
-            className={`p-2 rounded-xl transition-all ${view === 'settings' ? 'bg-[#FFF8E7] text-[#F5A623]' : 'text-[#9B9B9B] hover:text-[#1A1A1A] hover:bg-[#F0EBD8]'}`}
-          >
-            <SettingsIcon size={20} />
-          </button>
+          <h1 className="text-3xl font-black text-[#3D3832] tracking-tighter group-hover:text-[#C49A6C] transition-colors">Resurface</h1>
         </div>
       </header>
 
@@ -149,12 +158,75 @@ export default function FullDashboard() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
             >
-              <div className="mb-8">
-                <h2 className="text-3xl font-bold text-[#1A1A1A] mb-2">Settings</h2>
-                <p className="text-[#6B6B6B]">Configure your AI providers and extension behavior.</p>
+              <div className="mb-8 flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold text-[#3D3832] mb-2">Settings</h2>
+                  <p className="text-[#A8A29E]">Configure your AI providers and extension behavior.</p>
+                </div>
+                <button 
+                  onClick={() => setView('overview')}
+                  className="px-4 py-2 bg-white border border-[#E8E2D6] rounded-xl text-sm font-bold text-[#3D3832] hover:bg-[#FAF8F5] transition-colors flex items-center gap-2"
+                >
+                  <ChevronRight size={16} className="rotate-180" />
+                  Back to Dashboard
+                </button>
               </div>
               <div className="max-w-2xl">
                 <Settings />
+              </div>
+            </motion.div>
+          ) : view === 'projects' ? (
+            <motion.div
+              key="projects-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+            >
+              <div className="mb-8 flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold text-[#3D3832] mb-2">Projects</h2>
+                  <p className="text-[#A8A29E]">Organize your resources into focused knowledge hubs.</p>
+                </div>
+                <button 
+                  onClick={() => setView('overview')}
+                  className="px-4 py-2 bg-white border border-[#E8E2D6] rounded-xl text-sm font-bold text-[#3D3832] hover:bg-[#FAF8F5] transition-colors flex items-center gap-2"
+                >
+                  <ChevronRight size={16} className="rotate-180" />
+                  Back to Dashboard
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projects.map(p => {
+                  const projectResources = resources.filter(r => r.projectId === p.id);
+                  const unreadCount = projectResources.filter(r => r.readStatus === 'unread').length;
+                  return (
+                    <ProjectCard 
+                      key={p.id} 
+                      project={p} 
+                      resourceCount={projectResources.length}
+                      unreadCount={unreadCount}
+                      onDelete={async (projectId) => {
+                        await deleteProject(projectId);
+                        await loadData();
+                      }}
+                      onUpdate={async (projectId, updates) => {
+                        await updateProject(projectId, updates);
+                        await loadData();
+                      }}
+                      onClick={() => {
+                        setActiveProject(p);
+                        setView('overview');
+                      }}
+                    />
+                  );
+                })}
+                <button 
+                  onClick={() => setIsModalOpen(true)}
+                  className="h-full min-h-[160px] border-2 border-dashed border-[#E8E2D6] rounded-2xl text-[#A8A29E] hover:border-[#C49A6C] hover:text-[#C49A6C] hover:bg-[#FAF8F5] transition-all group flex flex-col items-center justify-center p-6"
+                >
+                  <Plus size={32} className="mb-2 group-hover:scale-110 transition-transform" />
+                  <p className="font-bold text-sm">New Project</p>
+                </button>
               </div>
             </motion.div>
           ) : activeProject ? (
@@ -195,37 +267,37 @@ export default function FullDashboard() {
 
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white border border-[#F0EBD8] p-6 rounded-2xl shadow-sm flex items-center gap-5">
-                  <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
+                <div className="bg-white border border-[#E8E2D6] p-6 rounded-2xl shadow-sm flex items-center gap-5">
+                  <div className="w-12 h-12 bg-[#FAF8F5] text-[#C49A6C] rounded-xl flex items-center justify-center border border-[#E8E2D6]/50">
                     <Package size={24} />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-[#1A1A1A]">{resources.length}</div>
-                    <div className="text-xs font-bold text-[#9B9B9B] uppercase tracking-wider">Resources</div>
+                    <div className="text-2xl font-bold text-[#3D3832]">{resources.length}</div>
+                    <div className="text-xs font-bold text-[#A8A29E] uppercase tracking-wider">Resources</div>
                   </div>
                 </div>
-                <div className="bg-white border border-[#F0EBD8] p-6 rounded-2xl shadow-sm flex items-center gap-5">
-                  <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center">
+                <div className="bg-white border border-[#E8E2D6] p-6 rounded-2xl shadow-sm flex items-center gap-5">
+                  <div className="w-12 h-12 bg-[#FAF8F5] text-[#C49A6C] rounded-xl flex items-center justify-center border border-[#E8E2D6]/50">
                     <Folder size={24} />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-[#1A1A1A]">{projects.length}</div>
-                    <div className="text-xs font-bold text-[#9B9B9B] uppercase tracking-wider">Projects</div>
+                    <div className="text-2xl font-bold text-[#3D3832]">{projects.length}</div>
+                    <div className="text-xs font-bold text-[#A8A29E] uppercase tracking-wider">Projects</div>
                   </div>
                 </div>
-                <div className="bg-white border border-[#F0EBD8] p-6 rounded-2xl shadow-sm flex items-center gap-5">
-                  <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center">
+                <div className="bg-white border border-[#E8E2D6] p-6 rounded-2xl shadow-sm flex items-center gap-5">
+                  <div className="w-12 h-12 bg-[#FAF8F5] text-[#C49A6C] rounded-xl flex items-center justify-center border border-[#E8E2D6]/50">
                     <Clock size={24} />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-[#1A1A1A]">{timeSaved}h</div>
-                    <div className="text-xs font-bold text-[#9B9B9B] uppercase tracking-wider">Time Saved</div>
+                    <div className="text-2xl font-bold text-[#3D3832]">{timeSaved}h</div>
+                    <div className="text-xs font-bold text-[#A8A29E] uppercase tracking-wider">Time Saved</div>
                   </div>
                 </div>
               </div>
 
               {/* Search Section */}
-              <div className="bg-white border border-[#F0EBD8] p-2 rounded-2xl shadow-sm">
+              <div className="bg-white border border-[#E8E2D6] p-2 rounded-2xl shadow-sm">
                 <SearchBar 
                   isFullPage={true} 
                   onResultClick={(r) => setSelectedResource(r)} 
@@ -233,22 +305,15 @@ export default function FullDashboard() {
               </div>
 
               {/* Projects Grid */}
-              <section>
+              <section id="projects-grid">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold text-[#1A1A1A]">Your Projects</h3>
-                  <button 
-                    onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 text-[#F5A623] font-bold text-sm hover:text-[#E09512] transition-colors px-3 py-1.5 border-2 border-[#F5A623] rounded-xl hover:bg-[#FFF8E7]"
-                  >
-                    <Plus size={16} />
-                    <span>New Project</span>
-                  </button>
+                  <h3 className="text-xl font-bold text-[#3D3832]">Your Projects</h3>
                 </div>
                 
                 {projects.length === 0 ? (
                   <button 
                     onClick={() => setIsModalOpen(true)}
-                    className="w-full py-12 border-2 border-dashed border-[#F0EBD8] rounded-2xl text-[#9B9B9B] hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[#FFF8E7] transition-all group"
+                    className="w-full py-12 border-2 border-dashed border-[#E8E2D6] rounded-2xl text-[#A8A29E] hover:border-[#C49A6C] hover:text-[#C49A6C] hover:bg-[#FAF8F5] transition-all group"
                   >
                     <Plus size={32} className="mx-auto mb-2 group-hover:scale-110 transition-transform" />
                     <p className="font-bold">Create your first project to organize your knowledge</p>
@@ -266,12 +331,10 @@ export default function FullDashboard() {
                           resourceCount={projectResources.length}
                           unreadCount={unreadCount}
                           onDelete={async (projectId) => {
-                            console.log('[DASHBOARD] Delete called for:', projectId);
                             await deleteProject(projectId);
                             await loadData();
                           }}
                           onUpdate={async (projectId, updates) => {
-                            console.log('[DASHBOARD] Update called for:', projectId);
                             await updateProject(projectId, updates);
                             await loadData();
                           }}
@@ -286,8 +349,8 @@ export default function FullDashboard() {
               {/* Recent Resources */}
               <section>
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold text-[#1A1A1A]">Recently Saved</h3>
-                  <div className="flex items-center gap-1 text-xs font-bold text-[#9B9B9B] hover:text-[#F5A623] cursor-pointer group">
+                  <h3 className="text-xl font-bold text-[#3D3832]">Recently Saved</h3>
+                  <div className="flex items-center gap-1 text-xs font-bold text-[#A8A29E] hover:text-[#C49A6C] cursor-pointer group">
                     <span>See All</span>
                     <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                   </div>
@@ -307,10 +370,10 @@ export default function FullDashboard() {
               </section>
 
               {/* Stats Visualization */}
-              <section className="bg-white border border-[#F0EBD8] p-8 rounded-2xl shadow-sm">
+              <section className="bg-white border border-[#E8E2D6] p-8 rounded-2xl shadow-sm">
                 <div className="flex items-center gap-3 mb-8">
-                  <TrendingUp className="text-[#F5A623]" size={20} />
-                  <h3 className="text-xl font-bold text-[#1A1A1A]">Knowledge Growth</h3>
+                  <TrendingUp className="text-[#C49A6C]" size={20} />
+                  <h3 className="text-xl font-bold text-[#3D3832]">Knowledge Growth</h3>
                 </div>
                 <div className="h-[300px]">
                   <StatsChart projects={projects} resources={resources} />
@@ -333,6 +396,15 @@ export default function FullDashboard() {
         isOpen={!!selectedResource}
         onClose={() => setSelectedResource(null)}
         onUpdate={loadData}
+      />
+
+      <FloatingNavBar 
+        currentView={view === 'settings' ? 'settings' : (view === 'projects' ? 'projects' : (activeProject ? '' : 'dashboard'))} 
+        setView={(v) => {
+          setView(v === 'overview' ? 'overview' : v);
+          setActiveProject(null);
+        }} 
+        onNewProject={() => setIsModalOpen(true)} 
       />
     </div>
   );

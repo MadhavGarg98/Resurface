@@ -32,8 +32,8 @@ export default function RecentResourcesList({ onSelect }) {
 
   if (resources.length === 0) {
     return (
-      <div className="text-center py-6 text-[#9B9B9B] text-xs">
-        <p>Press <kbd className="px-1 py-0.5 bg-[#F0EBD8] rounded">Ctrl+Shift+S</kbd> to save something</p>
+      <div className="text-center py-6 text-[#A8A29E] text-xs">
+        <p>Press <kbd className="px-1 py-0.5 bg-[#E8E2D6] rounded">Ctrl+Shift+S</kbd> to save something</p>
       </div>
     );
   }
@@ -48,14 +48,14 @@ export default function RecentResourcesList({ onSelect }) {
           <button
             key={res.id}
             onClick={() => onSelect ? onSelect(res) : handleOpen(res.url)}
-            className="w-full text-left bg-white border border-[#F0EBD8] p-3 rounded-xl hover:shadow-md transition-all group"
+            className="w-full text-left bg-white border border-[#E8E2D6] p-3 rounded-xl hover:shadow-md transition-all group"
           >
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-[#6B6B6B] group-hover:text-[#F5A623] transition-colors">
+              <div className="mt-0.5 text-[#6B6B6B] group-hover:text-[#C49A6C] transition-colors">
                 <Icon size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-[#1A1A1A] truncate group-hover:text-[#F5A623] transition-colors">
+                <h4 className="text-sm font-semibold text-[#3D3832] truncate group-hover:text-[#C49A6C] transition-colors">
                   {res.title}
                 </h4>
                 <div className="flex items-center gap-2 mt-1 text-[10px] text-[#9B9B9B]">

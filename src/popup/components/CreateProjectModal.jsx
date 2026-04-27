@@ -3,14 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Layout, Plus, Check, Save } from 'lucide-react';
 
 const COLORS = [
-  '#F5A623', // Yellow
+  '#C49A6C', // Brand Gold
+  '#A8A29E', // Muted Gray
   '#E57373', // Red
-  '#4CAF50', // Green
-  '#64B5F6', // Blue
+  '#F06292', // Pink
   '#BA68C8', // Purple
-  '#FF8A65', // Orange
+  '#7986CB', // Indigo
+  '#64B5F6', // Blue
   '#4DB6AC', // Teal
-  '#90A4AE'  // Gray
+  '#81C784', // Green
+  '#FFF176', // Yellow
+  '#FFB74D', // Orange
+  '#FF8A65'  // Deep Orange
 ];
 
 export default function CreateProjectModal({ isOpen, onClose, onSave, initialData = null }) {
@@ -58,28 +62,28 @@ export default function CreateProjectModal({ isOpen, onClose, onSave, initialDat
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-[#1A1A1A]/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-[#3D3832]/40 backdrop-blur-sm"
           />
           
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+            className="relative w-full max-w-lg bg-[#FAF8F5] rounded-3xl shadow-2xl border border-[#E8E2D6] overflow-hidden"
           >
             <div className="p-8">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-[#FFF8E7] text-[#F5A623] rounded-xl">
+                  <div className="p-2.5 bg-[#E8E2D6] text-[#C49A6C] rounded-xl">
                     <Layout size={24} />
                   </div>
-                  <h2 className="text-2xl font-black text-[#1A1A1A] tracking-tight">
+                  <h2 className="text-2xl font-black text-[#3D3832] tracking-tight">
                     {initialData ? 'Edit Project' : 'New Project'}
                   </h2>
                 </div>
                 <button 
                   onClick={onClose}
-                  className="p-2 text-[#9B9B9B] hover:text-[#1A1A1A] hover:bg-[#F0EBD8] rounded-xl transition-all"
+                  className="p-2 text-[#A8A29E] hover:text-[#3D3832] hover:bg-[#E8E2D6]/50 rounded-xl transition-all"
                 >
                   <X size={20} />
                 </button>
@@ -87,7 +91,7 @@ export default function CreateProjectModal({ isOpen, onClose, onSave, initialDat
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-[#9B9B9B] uppercase tracking-widest">Project Name</label>
+                  <label className="text-[10px] font-black text-[#A8A29E] uppercase tracking-widest">Project Name</label>
                   <input
                     autoFocus
                     type="text"
@@ -95,53 +99,53 @@ export default function CreateProjectModal({ isOpen, onClose, onSave, initialDat
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g., HackIndia 2024"
-                    className="w-full bg-[#FFFDF7] border border-[#F0EBD8] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#F5A623] transition-colors"
+                    className="w-full bg-white border border-[#E8E2D6] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#C49A6C] transition-colors text-[#3D3832]"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-[#9B9B9B] uppercase tracking-widest">AI Keywords</label>
+                    <label className="text-[10px] font-black text-[#A8A29E] uppercase tracking-widest">AI Keywords</label>
                     <input
                       type="text"
                       value={formData.keywords}
                       onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
                       placeholder="react, web3,..."
-                      className="w-full bg-[#FFFDF7] border border-[#F0EBD8] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#F5A623] transition-colors"
+                      className="w-full bg-white border border-[#E8E2D6] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#C49A6C] transition-colors text-[#3D3832]"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-[#9B9B9B] uppercase tracking-widest">Deadline</label>
+                    <label className="text-[10px] font-black text-[#A8A29E] uppercase tracking-widest">Deadline</label>
                     <input
                       type="date"
                       value={formData.deadline}
                       onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                      className="w-full bg-[#FFFDF7] border border-[#F0EBD8] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#F5A623] transition-colors"
+                      className="w-full bg-white border border-[#E8E2D6] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#C49A6C] transition-colors text-[#3D3832]"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-[#9B9B9B] uppercase tracking-widest">Related URLs (Comma separated)</label>
+                  <label className="text-[10px] font-black text-[#A8A29E] uppercase tracking-widest">Related URLs (Comma separated)</label>
                   <input
                     type="text"
                     value={formData.urls}
                     onChange={(e) => setFormData({ ...formData, urls: e.target.value })}
                     placeholder="wikipedia.org, github.com/*, docs.google.com"
-                    className="w-full bg-[#FFFDF7] border border-[#F0EBD8] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#F5A623] transition-colors"
+                    className="w-full bg-white border border-[#E8E2D6] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#C49A6C] transition-colors text-[#3D3832]"
                   />
-                  <p className="text-[10px] text-[#9B9B9B]">The sidebar will appear proactively on these sites.</p>
+                  <p className="text-[10px] text-[#A8A29E]">The sidebar will appear proactively on these sites.</p>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-[#9B9B9B] uppercase tracking-widest">Project Theme</label>
+                  <label className="text-[10px] font-black text-[#A8A29E] uppercase tracking-widest">Project Theme</label>
                   <div className="flex flex-wrap gap-3">
                     {COLORS.map(color => (
                       <button
                         key={color}
                         type="button"
                         onClick={() => setFormData({ ...formData, color })}
-                        className={`w-8 h-8 rounded-full transition-all flex items-center justify-center ${formData.color === color ? 'ring-2 ring-offset-2 ring-[#F5A623] scale-110' : 'hover:scale-105'}`}
+                        className={`w-8 h-8 rounded-full transition-all flex items-center justify-center ${formData.color === color ? 'ring-2 ring-offset-2 ring-[#C49A6C] scale-110' : 'hover:scale-105'}`}
                         style={{ backgroundColor: color }}
                       >
                         {formData.color === color && <Check size={14} className="text-white" />}
@@ -154,13 +158,13 @@ export default function CreateProjectModal({ isOpen, onClose, onSave, initialDat
                   <button
                     type="button"
                     onClick={onClose}
-                    className="flex-1 px-6 py-4 border-2 border-[#F0EBD8] text-[#6B6B6B] font-bold rounded-2xl hover:bg-[#FFFDF7] hover:border-[#F5A623] hover:text-[#F5A623] transition-all"
+                    className="flex-1 px-6 py-4 border-2 border-[#E8E2D6] text-[#A8A29E] font-bold rounded-2xl hover:bg-white hover:border-[#C49A6C] hover:text-[#C49A6C] transition-all"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-[2] bg-[#F5A623] hover:bg-[#E09512] text-white font-bold py-4 rounded-2xl shadow-xl shadow-[#F5A623]/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    className="flex-[2] bg-[#C49A6C] hover:bg-[#B5895B] text-white font-bold py-4 rounded-2xl shadow-xl shadow-[#C49A6C]/20 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
                     {initialData ? <Save size={20} /> : <Plus size={20} />}
                     <span>{initialData ? 'Save Changes' : 'Create Project'}</span>

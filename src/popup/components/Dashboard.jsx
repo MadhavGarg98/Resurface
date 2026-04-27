@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, LayoutGrid, Zap } from 'lucide-react';
+import { Plus, LayoutGrid, Zap, ChevronRight } from 'lucide-react';
 import { getProjects, getResources, saveProject, updateResource, deleteResource, deleteProject, updateProject } from '../../utils/storage.js';
 import { smartSearch } from '../../utils/smartSearch.js';
 import ProjectCard from './ProjectCard.jsx';
@@ -235,7 +235,9 @@ export default function Dashboard({ onProjectClick, onOpenResource }) {
                       }}
                       className="text-blue-400 text-sm font-bold hover:text-blue-300"
                     >
-                      Create your first project →
+                      <span className="flex items-center justify-center gap-1">
+                        Create your first project <ChevronRight size={14} />
+                      </span>
                     </button>
                   </div>
                 )}

@@ -37,7 +37,7 @@
           background: #FFFDF7; border-left: 1px solid #F0EBD8;
           box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08); z-index: 2147483646;
           transform: translateX(100%); transition: transform 0.3s ease;
-          font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
+          font-family: 'Outfit', -apple-system, sans-serif; display: flex; flex-direction: column;
         }
         #resurface-sidebar.visible { transform: translateX(0); }
         .rs-header { padding: 20px; border-bottom: 1px solid #F0EBD8; display: flex; justify-content: space-between; align-items: center; background: #FFF; }
@@ -213,7 +213,7 @@
       width: '360px', height: '500px',
       background: '#FAF8F5', border: '1px solid #E8E2D6', borderRadius: '20px',
       boxShadow: '0 8px 32px rgba(0,0,0,0.1)', zIndex: '2147483645',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif",
       animation: 'rsChatSlideIn 0.25s ease-out'
     });
 
@@ -254,7 +254,11 @@
       </div>
       <div style="padding: 12px 16px; border-top: 1px solid #E8E2D6; background: #FDFCFA; display: flex; gap: 8px; align-items: center;">
         <input id="rs-chat-input" type="text" placeholder="Ask about your library..." autocomplete="off" style="flex:1; padding: 10px 16px; border: 1.5px solid #DDD8CE; border-radius: 20px; outline: none; font-size: 13px; color: #3D3832; transition: border-color 0.2s, box-shadow 0.2s; background: #FAF8F5;">
-        <button id="rs-chat-send" style="width: 36px; height: 36px; background: #C49A6C; color: #FFF; border: none; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0;">→</button>
+        <button id="rs-chat-send" style="width: 36px; height: 36px; background: #C49A6C; color: #FFF; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m3 22 1-1 18-9-18-9-1 1 2 8h10"></path>
+          </svg>
+        </button>
       </div>
     `;
 

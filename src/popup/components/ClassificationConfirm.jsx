@@ -38,15 +38,15 @@ export default function ClassificationConfirm({
     return () => clearTimeout(timer);
   }, [timeLeft]);
   
-  const confidenceColor = classification.confidence >= 90 ? '#4CAF50' :
-                           classification.confidence >= 60 ? '#F5A623' : '#E57373';
+  const confidenceColor = classification.confidence >= 90 ? '#C49A6C' :
+                           classification.confidence >= 60 ? '#8B7E74' : '#A8A29E';
   
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.95 }}
-      className="bg-white border border-[#F0EBD8] rounded-xl p-4 shadow-lg max-w-md mx-auto"
+      className="bg-[#FAF8F5] border border-[#E8E2D6] rounded-xl p-4 shadow-lg max-w-md mx-auto"
     >
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
@@ -56,16 +56,16 @@ export default function ClassificationConfirm({
           alt="AI Assistant" 
         />
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-[#1A1A1A]">
+          <h3 className="text-sm font-semibold text-[#3D3832]">
             {classification.projectId ? 'Add to this project?' : 'Where should this go?'}
           </h3>
-          <p className="text-xs text-[#6B6B6B] mt-0.5">
+          <p className="text-xs text-[#A8A29E] mt-0.5">
             {classification.reasoning || 'AI needs help classifying this resource'}
           </p>
           
           {/* Confidence bar */}
           <div className="mt-2 flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-[#F0EBD8] rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-[#E8E2D6] rounded-full overflow-hidden">
               <div 
                 className="h-full rounded-full transition-all duration-500"
                 style={{ 
@@ -75,7 +75,7 @@ export default function ClassificationConfirm({
               />
             </div>
             <span 
-              className="text-xs font-medium"
+              className="text-[10px] font-black uppercase tracking-tighter"
               style={{ color: confidenceColor }}
             >
               {classification.confidence}% match
@@ -85,10 +85,10 @@ export default function ClassificationConfirm({
         
         {/* Timer */}
         <div className="text-center flex-shrink-0">
-          <div className="w-8 h-8 rounded-full border-2 border-[#F0EBD8] flex items-center justify-center">
-            <span className="text-xs font-medium text-[#9B9B9B]">{timeLeft}</span>
+          <div className="w-8 h-8 rounded-full border-2 border-[#E8E2D6] flex items-center justify-center">
+            <span className="text-xs font-medium text-[#A8A29E]">{timeLeft}</span>
           </div>
-          <span className="text-[9px] text-[#9B9B9B] block mt-0.5">auto</span>
+          <span className="text-[9px] text-[#A8A29E] block mt-0.5">auto</span>
         </div>
       </div>
       
@@ -97,20 +97,20 @@ export default function ClassificationConfirm({
         <div 
           className={`p-3 rounded-lg border-2 cursor-pointer transition-all mb-2 ${
             selectedProjectId === classification.projectId 
-              ? 'border-[#F5A623] bg-[#FFF8E7]' 
-              : 'border-[#F0EBD8] hover:border-[#E5DFC8]'
+              ? 'border-[#C49A6C] bg-white' 
+              : 'border-[#E8E2D6] hover:border-[#D4C2AD] bg-white/50'
           }`}
           onClick={() => setSelectedProjectId(classification.projectId)}
         >
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-[#1A1A1A]">
+              <div className="text-sm font-medium text-[#3D3832]">
                 📁 {classification.alternatives?.find(alt => alt.projectId === classification.projectId)?.projectName || 'Best Match'}
               </div>
               {classification.matchedKeywords?.length > 0 && (
                 <div className="flex gap-1 mt-1 flex-wrap">
                   {classification.matchedKeywords.map((kw, i) => (
-                    <span key={i} className="text-[10px] px-1.5 py-0.5 bg-[#FFF8E7] text-[#F5A623] rounded-full">
+                    <span key={i} className="text-[10px] px-1.5 py-0.5 bg-[#E8E2D6] text-[#C49A6C] rounded-full font-medium">
                       {kw}
                     </span>
                   ))}
@@ -118,7 +118,7 @@ export default function ClassificationConfirm({
               )}
             </div>
             {selectedProjectId === classification.projectId && (
-              <Check className="w-5 h-5 text-[#F5A623]" />
+              <Check className="w-5 h-5 text-[#C49A6C]" />
             )}
           </div>
         </div>
@@ -132,22 +132,22 @@ export default function ClassificationConfirm({
             key={i}
             className={`p-3 rounded-lg border cursor-pointer transition-all mb-2 ${
               selectedProjectId === alt.projectId
-                ? 'border-[#F5A623] bg-[#FFF8E7]'
-                : 'border-[#F0EBD8] hover:border-[#E5DFC8]'
+                ? 'border-[#C49A6C] bg-white'
+                : 'border-[#E8E2D6] hover:border-[#D4C2AD] bg-white/50'
             }`}
             onClick={() => setSelectedProjectId(alt.projectId)}
           >
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm text-[#1A1A1A]">
+                <span className="text-sm text-[#3D3832]">
                   📁 {alt.projectName}
                 </span>
-                <span className="text-xs text-[#9B9B9B] ml-2">
+                <span className="text-xs text-[#A8A29E] ml-2">
                   {alt.confidence}% match
                 </span>
               </div>
               {selectedProjectId === alt.projectId && (
-                <Check className="w-5 h-5 text-[#F5A623]" />
+                <Check className="w-5 h-5 text-[#C49A6C]" />
               )}
             </div>
           </div>
@@ -159,7 +159,7 @@ export default function ClassificationConfirm({
         {classification.alternatives?.length > (classification.projectId ? 1 : 0) && (
           <button
             onClick={() => setShowAllOptions(!showAllOptions)}
-            className="flex-1 text-xs text-[#6B6B6B] hover:text-[#F5A623] py-2 flex items-center justify-center gap-1"
+            className="flex-1 text-[10px] font-black uppercase text-[#A8A29E] hover:text-[#C49A6C] py-2 flex items-center justify-center gap-1"
           >
             <ChevronDown className={`w-3 h-3 transition-transform ${showAllOptions ? 'rotate-180' : ''}`} />
             {showAllOptions ? 'Fewer options' : 'See all options'}
@@ -168,7 +168,7 @@ export default function ClassificationConfirm({
         
         <button
           onClick={() => setIsCreating(true)}
-          className="flex-1 text-xs text-[#6B6B6B] hover:text-[#F5A623] py-2 flex items-center justify-center gap-1"
+          className="flex-1 text-[10px] font-black uppercase text-[#A8A29E] hover:text-[#C49A6C] py-2 flex items-center justify-center gap-1"
         >
           <Plus className="w-3 h-3" />
           Create new project
@@ -180,15 +180,15 @@ export default function ClassificationConfirm({
         <button
           onClick={() => onConfirm(selectedProjectId, classification.suggestedTags)}
           disabled={!selectedProjectId}
-          className="flex-1 h-9 bg-[#F5A623] text-white text-sm font-medium rounded-lg hover:bg-[#E09510] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="flex-1 h-9 bg-[#C49A6C] text-white text-sm font-bold rounded-lg hover:bg-[#B5895B] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-[#C49A6C]/20"
         >
-          ✓ Confirm
+          Confirm
         </button>
         <button
           onClick={onDismiss}
-          className="flex-1 h-9 border border-[#E5DFC8] text-[#6B6B6B] text-sm font-medium rounded-lg hover:bg-[#FFF8E7] transition-all"
+          className="flex-1 h-9 border border-[#E8E2D6] text-[#A8A29E] text-sm font-bold rounded-lg hover:bg-white transition-all"
         >
-          Skip for now
+          Skip
         </button>
       </div>
       
@@ -229,7 +229,7 @@ function CreateProjectInline({ suggestion, resource, onCreated, onCancel }) {
         keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
         relatedUrls: [],
         deadline: null,
-        color: suggestion?.color || '#F5A623'
+        color: suggestion?.color || '#C49A6C'
       };
       
       const saved = await saveProject(project);
@@ -245,16 +245,16 @@ function CreateProjectInline({ suggestion, resource, onCreated, onCancel }) {
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      className="mt-3 p-3 bg-[#FFFDF7] border border-[#F0EBD8] rounded-lg"
+      className="mt-3 p-3 bg-white border border-[#E8E2D6] rounded-lg shadow-inner"
     >
-      <h4 className="text-sm font-medium text-[#1A1A1A] mb-2">Create New Project</h4>
+      <h4 className="text-[10px] font-black uppercase text-[#3D3832] mb-2 tracking-widest">Create New Project</h4>
       
       <input
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Project name"
-        className="w-full h-8 px-3 text-sm border border-[#E5DFC8] rounded-lg mb-2 focus:outline-none focus:border-[#F5A623]"
+        className="w-full h-8 px-3 text-sm border border-[#E8E2D6] rounded-lg mb-2 focus:outline-none focus:border-[#C49A6C] bg-[#FAF8F5] text-[#3D3832]"
         autoFocus
       />
       
@@ -263,20 +263,20 @@ function CreateProjectInline({ suggestion, resource, onCreated, onCancel }) {
         value={keywords}
         onChange={(e) => setKeywords(e.target.value)}
         placeholder="Keywords (comma separated)"
-        className="w-full h-8 px-3 text-sm border border-[#E5DFC8] rounded-lg mb-2 focus:outline-none focus:border-[#F5A623]"
+        className="w-full h-8 px-3 text-sm border border-[#E8E2D6] rounded-lg mb-2 focus:outline-none focus:border-[#C49A6C] bg-[#FAF8F5] text-[#3D3832]"
       />
       
       <div className="flex gap-2">
         <button
           onClick={handleCreate}
           disabled={!name.trim() || isCreating}
-          className="flex-1 h-8 bg-[#4CAF50] text-white text-xs font-medium rounded-lg hover:bg-[#43A047] disabled:opacity-40 transition-all"
+          className="flex-1 h-8 bg-[#C49A6C] text-white text-xs font-bold rounded-lg hover:bg-[#B5895B] disabled:opacity-40 transition-all shadow-sm"
         >
           {isCreating ? 'Creating...' : 'Create & Assign'}
         </button>
         <button
           onClick={onCancel}
-          className="flex-1 h-8 border border-[#E5DFC8] text-[#6B6B6B] text-xs font-medium rounded-lg hover:bg-[#FFF8E7] transition-all"
+          className="flex-1 h-8 border border-[#E8E2D6] text-[#A8A29E] text-xs font-bold rounded-lg hover:bg-white transition-all"
         >
           Cancel
         </button>

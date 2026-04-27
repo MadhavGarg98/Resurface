@@ -26,60 +26,61 @@ function showResurfaceToast(title, message, type = 'success') {
   const toast = document.createElement('div');
   
   // Design variables
-  const bgColor = '#FFFDF7';
-  const accentColor = type === 'success' ? '#F5A623' : '#E57373';
-  const textColor = '#1A1A1A';
-  const subTextColor = '#6B6B6B';
+  const bgColor = '#FFFFFF';
+  const accentColor = type === 'success' ? '#C49A6C' : '#E57373';
+  const textColor = '#3D3832';
+  const subTextColor = '#6B6661';
 
   // Build HTML
   toast.innerHTML = `
     <div style="
       background: ${bgColor};
-      border: 1px solid #F0EBD8;
+      border: 1px solid #E8E2D6;
       border-left: 4px solid ${accentColor};
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+      border-radius: 16px;
+      padding: 18px 20px;
+      box-shadow: 0 12px 32px rgba(61, 56, 50, 0.12);
       display: flex;
       align-items: center;
-      gap: 12px;
-      min-width: 280px;
-      max-width: 350px;
+      gap: 14px;
+      min-width: 300px;
+      max-width: 380px;
       pointer-events: auto;
       transform: translateX(120%);
-      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     ">
       <div style="
-        width: 32px;
-        height: 32px;
-        background: ${accentColor}15;
-        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        background: ${accentColor}12;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
       ">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${accentColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${accentColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           ${type === 'success' ? '<path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'}
         </svg>
       </div>
       <div style="flex: 1; min-width: 0;">
-        <div style="font-weight: 800; color: ${textColor}; font-size: 14px; margin-bottom: 2px;">${title}</div>
-        <div style="color: ${subTextColor}; font-size: 12px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${message}</div>
+        <div style="font-weight: 800; color: ${textColor}; font-size: 15px; margin-bottom: 3px; letter-spacing: -0.01em;">${title}</div>
+        <div style="color: ${subTextColor}; font-size: 13px; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${message}</div>
       </div>
       <button id="resurface-toast-close" style="
         background: none;
         border: none;
-        color: #9B9B9B;
+        color: #A8A29E;
         cursor: pointer;
-        padding: 4px;
+        padding: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 6px;
+        border-radius: 8px;
         transition: all 0.2s;
       ">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     </div>
   `;

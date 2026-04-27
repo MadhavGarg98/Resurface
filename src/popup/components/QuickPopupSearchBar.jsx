@@ -39,12 +39,12 @@ export default function QuickPopupSearchBar({ onResultClick }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search saved resources..."
-          className="w-full bg-white border border-[#F0EBD8] rounded-xl py-2 pl-9 pr-8 text-xs focus:outline-none focus:border-[#F5A623] transition-colors"
+          className="w-full bg-white border border-[#E8E2D6] rounded-xl py-2 pl-9 pr-8 text-xs focus:outline-none focus:border-[#C49A6C] transition-colors"
         />
         {query && (
           <button
             onClick={() => setQuery('')}
-            className="absolute right-3 text-[#9B9B9B] hover:text-[#1A1A1A]"
+            className="absolute right-3 text-[#A8A29E] hover:text-[#3D3832]"
           >
             <X size={14} />
           </button>
@@ -52,12 +52,12 @@ export default function QuickPopupSearchBar({ onResultClick }) {
       </div>
 
       {results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#F0EBD8] rounded-xl shadow-xl z-50 max-h-[200px] overflow-y-auto overflow-x-hidden">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#E8E2D6] rounded-xl shadow-xl z-50 max-h-[200px] overflow-y-auto overflow-x-hidden">
           {results.map((res) => (
             <button
               key={res.id}
               onClick={() => onResultClick(res)}
-              className="w-full text-left p-3 hover:bg-[#FFF8E7] border-b border-[#F0EBD8] last:border-0 transition-colors"
+              className="w-full text-left p-3 hover:bg-[#FAF8F5] border-b border-[#E8E2D6] last:border-0 transition-colors"
             >
               <h5 className="text-xs font-semibold text-[#1A1A1A] truncate">{res.title}</h5>
               {res.summary && <p className="text-[10px] text-[#6B6B6B] truncate mt-0.5">{res.summary}</p>}

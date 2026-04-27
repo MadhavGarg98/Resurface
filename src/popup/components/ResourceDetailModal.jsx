@@ -45,13 +45,13 @@ export default function ResourceDetailModal({ resource, project, isOpen, onClose
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="relative w-full max-w-2xl h-full bg-[#FFFDF7] shadow-2xl flex flex-col"
+            className="relative w-full max-w-2xl h-full bg-[#FAF8F5] shadow-2xl flex flex-col border-l border-[#E8E2D6]"
           >
             {/* Header */}
-            <div className="p-6 border-b border-[#F0EBD8] flex items-center justify-between bg-white">
+            <div className="p-6 border-b border-[#E8E2D6] flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
               <button 
                 onClick={onClose}
-                className="p-2 text-[#9B9B9B] hover:text-[#1A1A1A] hover:bg-[#F0EBD8] rounded-xl transition-all flex items-center gap-2"
+                className="p-2 text-[#A8A29E] hover:text-[#3D3832] hover:bg-[#E8E2D6]/50 rounded-xl transition-all flex items-center gap-2"
               >
                 <ArrowLeft size={20} />
                 <span className="text-sm font-bold">Back</span>
@@ -60,7 +60,7 @@ export default function ResourceDetailModal({ resource, project, isOpen, onClose
               <div className="flex items-center gap-2">
                 <button 
                   onClick={handleOpenLink}
-                  className="bg-[#F5A623] hover:bg-[#E09512] text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-[#F5A623]/20 transition-all flex items-center gap-2"
+                  className="bg-[#C49A6C] hover:bg-[#B5895B] text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-[#C49A6C]/20 transition-all flex items-center gap-2 active:scale-95"
                 >
                   <ExternalLink size={16} />
                   <span>Open Website</span>
@@ -79,26 +79,26 @@ export default function ResourceDetailModal({ resource, project, isOpen, onClose
                       {project.name}
                     </div>
                   )}
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#F0EBD8] text-[#6B6B6B]">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#E8E2D6] text-[#3D3832]">
                     <Clock size={12} />
                     {timeAgo}
                   </div>
                 </div>
                 
-                <h2 className="text-3xl font-black text-[#1A1A1A] leading-tight tracking-tight">
+                <h2 className="text-3xl font-black text-[#3D3832] leading-tight tracking-tight">
                   {resource.title}
                 </h2>
                 
                 <button 
                   onClick={handleOpenLink}
-                  className="text-sm font-medium text-[#9B9B9B] hover:text-[#F5A623] transition-colors truncate block max-w-md"
+                  className="text-sm font-medium text-[#A8A29E] hover:text-[#C49A6C] transition-colors truncate block max-w-md"
                 >
                   {resource.url}
                 </button>
               </section>
 
               {/* AI Summary Card */}
-              <section className="bg-white border border-[#F0EBD8] rounded-2xl p-6 shadow-sm relative overflow-hidden">
+              <section className="bg-white border border-[#E8E2D6] rounded-2xl p-6 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5">
                   <img 
                     src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
@@ -108,7 +108,7 @@ export default function ResourceDetailModal({ resource, project, isOpen, onClose
                   />
                 </div>
                 <div className="relative">
-                  <div className="flex items-center gap-2 text-[#F5A623] mb-4">
+                  <div className="flex items-center gap-2 text-[#C49A6C] mb-4">
                     <img 
                       src={typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('icons/favicon.png') : '/icons/favicon.png'} 
                       style={{ width: 20, height: 20 }} 
@@ -117,7 +117,7 @@ export default function ResourceDetailModal({ resource, project, isOpen, onClose
                     />
                     <h3 className="text-xs font-black uppercase tracking-widest">AI Summary</h3>
                   </div>
-                  <p className="text-lg text-[#1A1A1A] leading-relaxed font-medium italic">
+                  <p className="text-lg text-[#3D3832] leading-relaxed font-medium italic">
                     "{resource.summary || 'Summary not available.'}"
                   </p>
                 </div>
@@ -126,15 +126,15 @@ export default function ResourceDetailModal({ resource, project, isOpen, onClose
               {/* Key Takeaways */}
               {resource.bulletSummary && resource.bulletSummary.length > 0 && (
                 <section className="space-y-4">
-                  <h3 className="text-xs font-black text-[#9B9B9B] uppercase tracking-widest flex items-center gap-2">
-                    <CheckCircle size={14} className="text-green-500" />
+                  <h3 className="text-xs font-black text-[#A8A29E] uppercase tracking-widest flex items-center gap-2">
+                    <CheckCircle size={14} className="text-[#C49A6C]" />
                     Key Takeaways
                   </h3>
                   <div className="space-y-3">
                     {resource.bulletSummary.map((bullet, i) => (
                       <div key={i} className="flex gap-3 group">
-                        <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#F5A623] flex-shrink-0" />
-                        <p className="text-[#1A1A1A] leading-relaxed text-sm">{bullet}</p>
+                        <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#C49A6C] flex-shrink-0" />
+                        <p className="text-[#3D3832] leading-relaxed text-sm">{bullet}</p>
                       </div>
                     ))}
                   </div>
@@ -143,24 +143,24 @@ export default function ResourceDetailModal({ resource, project, isOpen, onClose
 
               {/* Original Content */}
               <section className="space-y-4">
-                <h3 className="text-xs font-black text-[#9B9B9B] uppercase tracking-widest flex items-center gap-2">
+                <h3 className="text-xs font-black text-[#A8A29E] uppercase tracking-widest flex items-center gap-2">
                   <FileText size={14} />
                   Captured Content
                 </h3>
-                <div className="bg-[#FFFDF7] border border-[#F0EBD8] rounded-2xl p-6 text-sm text-[#6B6B6B] leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar">
+                <div className="bg-white border border-[#E8E2D6] rounded-2xl p-6 text-sm text-[#3D3832]/80 leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar">
                   {resource.textContent || 'No text content captured.'}
                 </div>
               </section>
             </div>
 
             {/* Footer Actions */}
-            <div className="p-6 border-t border-[#F0EBD8] bg-white flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[10px] font-bold text-[#9B9B9B] uppercase tracking-wider">
+            <div className="p-6 border-t border-[#E8E2D6] bg-white flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-[#A8A29E] uppercase tracking-wider">
                 <span>Viewed {resource.accessCount || 0} times</span>
                 {resource.aiProvider && (
                   <>
                     <span>•</span>
-                    <span className="text-[#F5A623]">Processed by {resource.aiProvider}</span>
+                    <span className="text-[#C49A6C]">Processed by {resource.aiProvider}</span>
                   </>
                 )}
               </div>
@@ -173,7 +173,7 @@ export default function ResourceDetailModal({ resource, project, isOpen, onClose
                     onClose();
                   }
                 }}
-                className="flex items-center gap-2 text-red-500 hover:text-red-600 font-bold text-sm transition-colors px-4 py-2 hover:bg-red-50 rounded-xl"
+                className="flex items-center gap-2 text-[#C49A6C] hover:text-[#B5895B] font-bold text-sm transition-colors px-4 py-2 hover:bg-[#FAF8F5] rounded-xl"
               >
                 <Trash2 size={16} />
                 <span>Delete</span>

@@ -139,7 +139,13 @@ function buildSidebarHTML(data) {
           <div class="rs-resource-title">${escapeHTML(r.title || 'Untitled')}</div>
           <div class="rs-resource-summary">${escapeHTML(truncatedSummary)}</div>
         </div>
-        ${r.url ? '<div class="rs-resource-arrow">→</div>' : ''}
+        ${r.url ? `
+          <div class="rs-resource-arrow">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m9 18 6-6-6-6"></path>
+            </svg>
+          </div>
+        ` : ''}
       </div>
     `;
   }).join('');
@@ -193,15 +199,15 @@ function injectSidebarStyles() {
       position: fixed;
       top: 0;
       right: 0;
-      width: 360px;
+      width: 380px;
       height: 100vh;
-      background: #FFFDF7;
-      border-left: 1px solid #F0EBD8;
-      box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+      background: #FAF8F5;
+      border-left: 1px solid #E8E2D6;
+      box-shadow: -12px 0 48px rgba(61, 56, 50, 0.12);
       z-index: 2147483646;
       transform: translateX(100%);
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -217,10 +223,10 @@ function injectSidebarStyles() {
     
     .rs-sidebar-header {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      padding: 20px 20px 16px;
-      border-bottom: 1px solid #F0EBD8;
+      padding: 24px 24px 20px;
+      border-bottom: 1px solid #E8E2D6;
       background: #FFFFFF;
     }
     
@@ -230,110 +236,122 @@ function injectSidebarStyles() {
     }
     
     .rs-project-name {
-      font-size: 16px;
-      font-weight: 600;
-      color: #1A1A1A;
+      font-size: 18px;
+      font-weight: 800;
+      color: #3D3832;
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 4px;
+      gap: 10px;
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
     }
     
     .rs-project-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
       flex-shrink: 0;
     }
     
     .rs-deadline {
-      font-size: 12px;
-      font-weight: 500;
+      font-size: 13px;
+      font-weight: 600;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+      color: #A8A29E;
     }
     
     .rs-deadline-icon {
-      font-size: 12px;
+      font-size: 13px;
     }
     
     .rs-close-btn {
       background: none;
       border: none;
-      font-size: 16px;
-      color: #9B9B9B;
+      font-size: 18px;
+      color: #A8A29E;
       cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 6px;
+      padding: 8px;
+      border-radius: 12px;
       transition: all 0.2s;
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .rs-close-btn:hover {
-      background: #FFF8E7;
-      color: #1A1A1A;
+      background: #FAF8F5;
+      color: #3D3832;
+      transform: rotate(90deg);
     }
     
     .rs-sidebar-body {
       flex: 1;
       overflow-y: auto;
-      padding: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
     }
     
     .rs-sidebar-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1A1A1A;
-      margin-bottom: 4px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #3D3832;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
     
     .rs-badge {
       font-size: 11px;
-      font-weight: 500;
-      background: #FFF8E7;
-      color: #F5A623;
-      padding: 2px 8px;
-      border-radius: 12px;
+      font-weight: 700;
+      background: rgba(196, 154, 108, 0.1);
+      color: #C49A6C;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     
     .rs-resource-count {
-      font-size: 12px;
-      color: #9B9B9B;
-      margin-bottom: 16px;
+      font-size: 13px;
+      color: #A8A29E;
+      margin-top: -12px;
     }
     
     .rs-resources-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 12px;
     }
     
     .rs-resource-item {
       display: flex;
       align-items: flex-start;
-      gap: 10px;
-      padding: 12px;
+      gap: 12px;
+      padding: 16px;
       background: #FFFFFF;
-      border: 1px solid #F0EBD8;
-      border-radius: 12px;
+      border: 1px solid #E8E2D6;
+      border-radius: 16px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 4px rgba(61, 56, 50, 0.02);
     }
     
     .rs-resource-item:hover {
-      border-color: #F5A623;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-      background: #FFFDF7;
+      border-color: #C49A6C;
+      box-shadow: 0 8px 20px rgba(196, 154, 108, 0.12);
+      transform: translateY(-2px);
     }
     
     .rs-resource-icon {
-      font-size: 16px;
+      font-size: 18px;
       flex-shrink: 0;
       margin-top: 2px;
+      opacity: 0.8;
     }
     
     .rs-resource-content {
@@ -342,10 +360,10 @@ function injectSidebarStyles() {
     }
     
     .rs-resource-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #1A1A1A;
-      margin-bottom: 3px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #3D3832;
+      margin-bottom: 4px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -353,8 +371,8 @@ function injectSidebarStyles() {
     
     .rs-resource-summary {
       font-size: 12px;
-      color: #6B6B6B;
-      line-height: 1.4;
+      color: #6B6661;
+      line-height: 1.6;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
@@ -363,32 +381,42 @@ function injectSidebarStyles() {
     
     .rs-resource-arrow {
       font-size: 14px;
-      color: #9B9B9B;
+      color: #A8A29E;
       flex-shrink: 0;
-      margin-top: 2px;
+      margin-top: 4px;
+      transition: transform 0.2s;
+    }
+    
+    .rs-resource-item:hover .rs-resource-arrow {
+      color: #C49A6C;
+      transform: translateX(4px);
     }
     
     .rs-sidebar-footer {
-      margin-top: 16px;
-      padding-top: 12px;
-      border-top: 1px solid #F0EBD8;
+      margin-top: auto;
+      padding: 24px;
+      border-top: 1px solid #E8E2D6;
+      background: #FFFFFF;
     }
     
     .rs-open-dashboard-btn {
       width: 100%;
-      padding: 10px;
-      background: #F5A623;
+      padding: 14px;
+      background: #C49A6C;
       color: #FFFFFF;
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 14px;
+      font-weight: 700;
       border: none;
-      border-radius: 10px;
+      border-radius: 14px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(196, 154, 108, 0.3);
     }
     
     .rs-open-dashboard-btn:hover {
-      background: #E09510;
+      background: #B5895B;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(196, 154, 108, 0.4);
     }
     
     /* Responsive: smaller sidebar on narrow screens */

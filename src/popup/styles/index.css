@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,21 +7,26 @@
 :root {
   --bg-primary: #FFFDF7;
   --bg-card: #FFFFFF;
-  --accent-yellow: #F5A623;
-  --accent-yellow-light: #FFF8E7;
-  --text-primary: #1A1A1A;
+  --accent-yellow: #C49A6C;
+  --accent-yellow-light: #FAF8F5;
+  --text-primary: #3D3832;
   --text-secondary: #6B6B6B;
-  --text-tertiary: #9B9B9B;
-  --border-warm: #F0EBD8;
+  --text-tertiary: #A8A29E;
+  --border-warm: #E8E2D6;
 }
 
 @layer base {
   body {
-    @apply bg-[#FFFDF7] text-[#1A1A1A];
+    @apply bg-[#FAF8F5] text-[#3D3832];
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-size: 16px;
+  }
+  
+  * {
+    font-family: 'Outfit', sans-serif !important;
   }
 }
 

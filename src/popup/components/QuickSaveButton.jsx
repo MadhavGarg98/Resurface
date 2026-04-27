@@ -20,8 +20,8 @@ export default function QuickSaveButton() {
       disabled={status === 'saving'}
       className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold transition-all shadow-lg ${
         status === 'saved' 
-          ? 'bg-green-500 text-white shadow-green-500/20' 
-          : 'bg-[#F5A623] hover:bg-[#E09512] text-white shadow-[#F5A623]/20'
+          ? 'bg-green-600 text-white shadow-green-600/20' 
+          : 'bg-[#C49A6C] hover:bg-[#3D3832] text-white shadow-[#C49A6C]/20'
       }`}
     >
       <AnimatePresence mode="wait">

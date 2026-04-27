@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings as SettingsIcon, LayoutGrid, ArrowLeft, ExternalLink, Database } from 'lucide-react';
+import { Settings as SettingsIcon, LayoutGrid, ArrowLeft, ExternalLink, Database, ChevronRight } from 'lucide-react';
 import QuickPopupSearchBar from './components/QuickPopupSearchBar.jsx';
 import QuickSaveButton from './components/QuickSaveButton.jsx';
 import RecentResourcesList from './components/RecentResourcesList.jsx';
@@ -147,26 +147,27 @@ export default function App() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#F0EBD8] flex items-center justify-between">
+            <div className="pt-4 border-t border-[#E8E2D6] flex items-center justify-between">
               <button
                 onClick={openFullDashboard}
-                className="flex items-center gap-1.5 text-xs font-bold text-[#F5A623] hover:text-[#E09512] transition-colors"
+                className="flex items-center gap-1.5 text-xs font-bold text-[#C49A6C] hover:text-[#3D3832] transition-colors"
               >
                 <LayoutGrid size={14} />
-                <span>Open Full Dashboard →</span>
+                <span>Open Full Dashboard</span>
+                <ChevronRight size={14} className="mt-0.5" />
               </button>
               
               <div className="flex items-center gap-1">
                 <button
                   onClick={testSave}
                   title="Diagnostic Save"
-                  className="p-1.5 text-[#9B9B9B] hover:text-[#F5A623] hover:bg-[#FFF8E7] rounded-lg transition-all"
+                  className="p-1.5 text-[#A8A29E] hover:text-[#C49A6C] hover:bg-[#FAF8F5] rounded-lg transition-all"
                 >
                   <Database size={16} />
                 </button>
                 <button
                   onClick={() => setView('settings')}
-                  className="p-1.5 text-[#9B9B9B] hover:text-[#F5A623] hover:bg-[#FFF8E7] rounded-lg transition-all"
+                  className="p-1.5 text-[#A8A29E] hover:text-[#C49A6C] hover:bg-[#FAF8F5] rounded-lg transition-all"
                 >
                   <SettingsIcon size={16} />
                 </button>
@@ -218,8 +219,8 @@ export default function App() {
             </div>
             
             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4">
-              <div className="bg-[#FFF8E7] p-4 rounded-xl border border-[#F5A623]/20">
-                <p className="text-xs text-[#1A1A1A] leading-relaxed italic">
+              <div className="bg-[#FAF8F5] p-4 rounded-xl border border-[#C49A6C]/20">
+                <p className="text-xs text-[#3D3832] leading-relaxed italic">
                   "{selectedResource?.summary || 'No summary available.'}"
                 </p>
               </div>
@@ -230,7 +231,7 @@ export default function App() {
                   <ul className="space-y-2">
                     {selectedResource.bulletSummary.map((bullet, i) => (
                       <li key={i} className="flex gap-2 text-xs text-[#6B6B6B]">
-                        <div className="mt-1.5 w-1 h-1 rounded-full bg-[#F5A623] flex-shrink-0" />
+                        <div className="mt-1.5 w-1 h-1 rounded-full bg-[#C49A6C] flex-shrink-0" />
                         <span>{bullet}</span>
                       </li>
                     ))}
@@ -240,7 +241,7 @@ export default function App() {
 
               <button
                 onClick={() => chrome.tabs.create({ url: selectedResource.url })}
-                className="w-full bg-[#F5A623] text-white font-bold py-3 rounded-xl shadow-lg shadow-[#F5A623]/10 transition-all flex items-center justify-center gap-2 text-xs"
+                className="w-full bg-[#C49A6C] text-white font-bold py-3 rounded-xl shadow-lg shadow-[#C49A6C]/10 transition-all flex items-center justify-center gap-2 text-xs"
               >
                 <ExternalLink size={14} />
                 <span>Open Original Source</span>

@@ -17,7 +17,7 @@ export default function StatsChart({ projects, resources }) {
   })).sort((a, b) => b.count - a.count);
 
   if (data.length === 0) return (
-    <div className="flex items-center justify-center h-full text-[#9B9B9B] text-sm italic">
+    <div className="flex items-center justify-center h-full text-[#A8A29E] text-sm italic">
       No data to visualize yet.
     </div>
   );
@@ -29,18 +29,18 @@ export default function StatsChart({ projects, resources }) {
           dataKey="name" 
           axisLine={false} 
           tickLine={false} 
-          tick={{ fill: '#9B9B9B', fontSize: 10, fontWeight: 700 }}
+          tick={{ fill: '#A8A29E', fontSize: 10, fontWeight: 700 }}
           dy={10}
         />
         <YAxis hide />
         <Tooltip
-          cursor={{ fill: '#FFF8E7' }}
+          cursor={{ fill: '#FAF8F5' }}
           content={({ active, payload }) => {
             if (active && payload && payload.length) {
               return (
-                <div className="bg-white border border-[#F0EBD8] p-3 rounded-xl shadow-xl">
-                  <p className="text-xs font-bold text-[#1A1A1A] mb-1">{payload[0].payload.name}</p>
-                  <p className="text-[10px] font-black text-[#F5A623] uppercase tracking-widest">
+                <div className="bg-white border border-[#E8E2D6] p-3 rounded-xl shadow-xl">
+                  <p className="text-xs font-bold text-[#3D3832] mb-1">{payload[0].payload.name}</p>
+                  <p className="text-[10px] font-black text-[#C49A6C] uppercase tracking-widest">
                     {payload[0].value} Resources
                   </p>
                 </div>
@@ -55,7 +55,7 @@ export default function StatsChart({ projects, resources }) {
           barSize={40}
         >
           {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.8} />
+            <Cell key={`cell-${index}`} fill={entry.color || '#C49A6C'} fillOpacity={0.8} />
           ))}
         </Bar>
       </BarChart>
