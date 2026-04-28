@@ -67,6 +67,7 @@ Return ONLY JSON:
   "confidence": 0-100,
   "projectId": "matched_project_id_or_null",
   "reasoning": "Explain exactly why this matches or why a new project is needed",
+  "suggestedResourceTitle": "A better, concise title for this resource (max 60 chars)",
   "suggestedNewProject": {
     "name": "Specific Name (NOT 'New Project', use something like 'Mobile Tech')",
     "keywords": ["tag1", "tag2", "tag3"],
@@ -86,6 +87,7 @@ function parseCategorizationResponse(text, projects) {
       confidence: parsed.confidence || 0,
       projectId: parsed.projectId,
       reasoning: parsed.reasoning || '',
+      suggestedResourceTitle: parsed.suggestedResourceTitle || null,
       suggestedNewProject: parsed.suggestedNewProject,
       suggestedTags: parsed.suggestedTags || []
     };

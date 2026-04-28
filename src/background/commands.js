@@ -182,8 +182,19 @@ async function handleSaveCommand() {
         // AI consultation (optional, but let's keep it if confident)
         const aiMatch = await categorizeResource(resource);
         
+        // Update title if AI suggested a better one and current is poor
+        if (aiMatch.suggestedResourceTitle && (resource.title === 'Untitled' || resource.title.length < 5)) {
+          resource.title = aiMatch.suggestedResourceTitle;
+          await updateResource(resource.id, { title: resource.title });
+          console.log(`[Save] AI renamed resource to: ${resource.title}`);
+        }
+
         if (aiMatch.decision === 'MATCH' && aiMatch.confidence >= 85) {
           resource.projectId = aiMatch.projectId;
+          await updateResource(resource.id, { 
+            projectId: resource.projectId,
+            tags: aiMatch.suggestedTags || []
+          });
         } else {
           // No confident match — trigger project creation popup
           resource.projectId = null;

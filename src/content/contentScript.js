@@ -203,57 +203,70 @@
   // PROJECT CREATION POPUP (SMART MODAL)
   // ============================================
   function showProjectCreationPopup(data) {
-    const { resource, suggestedProject } = data;
+    const { resource, suggestedProject, classification } = data;
     
     // Remove existing
     const existing = document.getElementById('rs-project-popup');
     if (existing) existing.remove();
 
-    const projectName = suggestedProject?.name || 'New Project';
+    const isMatch = classification?.decision === 'MATCH' || (classification?.projectId && classification?.confidence > 50);
+    const projectName = isMatch 
+      ? (classification.alternatives?.find(a => a.projectId === classification.projectId)?.projectName || 'Matched Project')
+      : (suggestedProject?.name || 'New Project');
     const keywords = (suggestedProject?.keywords || []).join(', ');
     const resourceTitle = (resource?.title || 'Untitled').substring(0, 50);
 
     const popup = document.createElement('div');
     popup.id = 'rs-project-popup';
     popup.innerHTML = `
-      <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:2147483645;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);font-family:system-ui,sans-serif;">
-        <div style="background:white;border-radius:20px;width:420px;max-width:90vw;box-shadow:0 24px 80px rgba(0,0,0,0.3);overflow:hidden;animation:rsPopupIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
+      <div style="position:fixed;top:24px;right:24px;z-index:2147483645;font-family: 'Inter', -apple-system, sans-serif;pointer-events:none;">
+        <div style="background:white;border-radius:24px;width:340px;box-shadow:0 24px 64px rgba(61, 56, 50, 0.18);border:1px solid #E8E2D6;overflow:hidden;animation:rsPopupSlideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);pointer-events:auto;">
           
-          <div style="padding:24px 28px;border-bottom:1px solid #f0f0f0;background:#FFFDF7;">
-            <div style="font-size:18px;font-weight:800;color:#1a1a1a;display:flex;align-items:center;gap:10px;">📁 Create New Project</div>
-            <div style="font-size:12px;color:#999;margin-top:4px;">No matching project found for this save</div>
-          </div>
-          
-          <div style="padding:24px 28px;">
-            <div style="font-size:12px;color:#666;margin-bottom:16px;padding:12px;background:#f9f9f9;border-radius:12px;border:1px solid #eee;">
-              <span style="color:#999;font-weight:600;">RESOURCE:</span> <strong>${escapeHTML(resourceTitle)}</strong>
+          <div style="padding:20px 24px;border-bottom:1px solid #E8E2D6;background:#FFFFFF;">
+            <div style="font-size:15px;font-weight:800;color:#3D3832;display:flex;align-items:center;gap:10px;">
+              <div style="width:24px;height:24px;background:#C49A6C;border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 8px rgba(196, 154, 108, 0.3);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4"><path d="M5 12h14m-7-7v14"/></svg>
+              </div>
+              ${isMatch ? 'Confirm Assignment' : 'Create New Project'}
             </div>
-            
-            <div style="margin-bottom:16px;">
-              <label style="font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Project Name</label>
-              <input id="rs-proj-name" type="text" value="${escapeHTML(projectName)}" style="width:100%;padding:12px 16px;border:1.5px solid #eee;border-radius:12px;font-size:14px;box-sizing:border-box;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='#F5A623'" onblur="this.style.borderColor='#eee'">
-            </div>
-            
-            <div style="margin-bottom:16px;">
-              <label style="font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Keywords</label>
-              <input id="rs-proj-keywords" type="text" value="${escapeHTML(keywords)}" style="width:100%;padding:12px 16px;border:1.5px solid #eee;border-radius:12px;font-size:14px;box-sizing:border-box;outline:none;transition:border-color 0.2s;" placeholder="keyword1, keyword2" onfocus="this.style.borderColor='#F5A623'" onblur="this.style.borderColor='#eee'">
-            </div>
-            
-            <div style="font-size:11px;color:#856404;margin-bottom:0;padding:10px 14px;background:#FFF8E7;border-radius:10px;border:1px solid #FFEBA0;">
-              💡 <strong>Smart Link:</strong> Future saves from this site will automatically go here.
+            <div style="font-size:11px;color:#A8A29E;margin-top:4px;font-weight:500;">
+              ${isMatch ? 'AI found a likely project match' : 'No matching project found for this site'}
             </div>
           </div>
           
-          <div style="padding:20px 28px;border-top:1px solid #f0f0f0;display:flex;gap:12px;background:#fafafa;">
-            <button id="rs-create-btn" style="flex:2;padding:14px;background:#F5A623;color:white;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:15px;transition:transform 0.2s, background 0.2s;" onmouseover="this.style.background='#E09510'" onmouseout="this.style.background='#F5A623'" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">✓ Create & Save</button>
-            <button id="rs-skip-btn" style="flex:1;padding:14px;background:white;border:1.5px solid #ddd;border-radius:12px;cursor:pointer;font-size:14px;color:#666;font-weight:600;">Skip</button>
+          <div style="padding:20px 24px;background:#FAF8F5;">
+            <div style="margin-bottom:16px;">
+              <label style="font-size:10px;font-weight:800;color:#3D3832;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;">Resource Title</label>
+              <input id="rs-res-title" type="text" value="${escapeHTML(resource?.title || 'Untitled')}" style="width:100%;padding:10px 14px;border:1px solid #E8E2D6;border-radius:12px;font-size:13px;box-sizing:border-box;outline:none;transition:all 0.2s;background:white;color:#3D3832;font-weight:600;" onfocus="this.style.borderColor='#C49A6C';this.style.boxShadow='0 0 0 3px rgba(196,154,108,0.1)'" onblur="this.style.borderColor='#E8E2D6';this.style.boxShadow='none'">
+            </div>
+            
+            <div style="margin-bottom:16px;">
+              <label style="font-size:10px;font-weight:800;color:#3D3832;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;">Project Name</label>
+              <input id="rs-proj-name" type="text" value="${escapeHTML(projectName)}" style="width:100%;padding:10px 14px;border:1px solid #E8E2D6;border-radius:12px;font-size:13px;box-sizing:border-box;outline:none;transition:all 0.2s;background:white;color:#3D3832;font-weight:600;" onfocus="this.style.borderColor='#C49A6C';this.style.boxShadow='0 0 0 3px rgba(196,154,108,0.1)'" onblur="this.style.borderColor='#E8E2D6';this.style.boxShadow='none'">
+            </div>
+            
+            <div style="margin-bottom:16px;">
+              <label style="font-size:10px;font-weight:800;color:#3D3832;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;">Keywords</label>
+              <input id="rs-proj-keywords" type="text" value="${escapeHTML(keywords)}" style="width:100%;padding:10px 14px;border:1px solid #E8E2D6;border-radius:12px;font-size:13px;box-sizing:border-box;outline:none;transition:all 0.2s;background:white;color:#3D3832;font-weight:600;" placeholder="e.g. news, tech" onfocus="this.style.borderColor='#C49A6C';this.style.boxShadow='0 0 0 3px rgba(196,154,108,0.1)'" onblur="this.style.borderColor='#E8E2D6';this.style.boxShadow='none'">
+            </div>
+            
+            <div style="font-size:10px;color:#B5895B;padding:10px 12px;background:#FFFDF7;border-radius:10px;border:1px solid #FFEBA0;font-weight:500;line-height:1.4;">
+              💡 <strong>Resurface AI:</strong> ${isMatch ? 'This resource matches your existing project perfectly.' : 'Future saves from this domain will automatically group here.'}
+            </div>
+          </div>
+          
+          <div style="padding:16px 24px 24px;background:white;border-top:1px solid #E8E2D6;display:flex;gap:10px;">
+            <button id="rs-create-btn" style="flex:2;padding:12px;background:#C49A6C;color:white;border:none;border-radius:14px;font-weight:800;cursor:pointer;font-size:13px;transition:all 0.2s;box-shadow:0 4px 12px rgba(196, 154, 108, 0.3);" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(196, 154, 108, 0.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 12px rgba(196, 154, 108, 0.3)'">
+              ${isMatch ? '✓ Confirm & Save' : 'Confirm & Save'}
+            </button>
+            <button id="rs-skip-btn" style="flex:1;padding:12px;background:white;border:1px solid #E8E2D6;border-radius:14px;cursor:pointer;font-size:13px;color:#A8A29E;font-weight:700;transition:all 0.2s;">Skip</button>
           </div>
         </div>
       </div>
       <style>
-        @keyframes rsPopupIn {
-          from { opacity:0; transform:scale(0.9) translateY(20px); }
-          to { opacity:1; transform:scale(1) translateY(0); }
+        @keyframes rsPopupSlideIn {
+          from { opacity:0; transform: translateX(40px); }
+          to { opacity:1; transform: translateX(0); }
         }
       </style>
     `;
@@ -263,31 +276,55 @@
     popup.querySelector('#rs-create-btn').onclick = async () => {
       const name = popup.querySelector('#rs-proj-name').value.trim();
       const keywords = popup.querySelector('#rs-proj-keywords').value.split(',').map(k => k.trim()).filter(k => k);
+      const resTitle = popup.querySelector('#rs-res-title').value.trim();
 
       if (!name) {
         alert('Please enter a project name');
         return;
       }
 
-      chrome.runtime.sendMessage({
-        action: 'CREATE_PROJECT_AND_ASSIGN',
-        data: {
-          resourceId: resource.id,
-          projectName: name,
-          keywords: keywords,
-          relatedUrls: suggestedProject?.relatedUrls || []
-        }
-      }, (response) => {
-        popup.remove();
-        if (response?.success) {
-          showToast('✅ Project created & saved!');
-        }
-      });
+      if (isMatch && classification?.projectId) {
+        chrome.runtime.sendMessage({
+          action: 'ASSIGN_TO_PROJECT',
+          data: {
+            resourceId: resource.id,
+            resourceTitle: resTitle,
+            projectId: classification.projectId
+          }
+        }, (response) => {
+          popup.remove();
+          if (response?.success) {
+            showToast('✅ Resource assigned!');
+          }
+        });
+      } else {
+        chrome.runtime.sendMessage({
+          action: 'CREATE_PROJECT_AND_ASSIGN',
+          data: {
+            resourceId: resource.id,
+            resourceTitle: resTitle,
+            projectName: name,
+            keywords: keywords,
+            relatedUrls: suggestedProject?.relatedUrls || [],
+            tags: classification?.suggestedTags || []
+          }
+        }, (response) => {
+          popup.remove();
+          if (response?.success) {
+            showToast('✅ Project created & saved!');
+          }
+        });
+      }
     };
 
     popup.querySelector('#rs-skip-btn').onclick = () => {
-      popup.remove();
-      showToast('Saved without project');
+      chrome.runtime.sendMessage({
+        action: 'DISMISS_CLASSIFICATION',
+        data: { resourceId: resource.id }
+      }, () => {
+        popup.remove();
+        showToast('Saved to library');
+      });
     };
 
     // Close on backdrop click

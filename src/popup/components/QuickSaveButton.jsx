@@ -8,7 +8,7 @@ export default function QuickSaveButton() {
   const handleSave = async () => {
     setStatus('saving');
     // We send a message to the background script to trigger the save command logic
-    chrome.runtime.sendMessage({ action: 'save-current-page' }, (response) => {
+    chrome.runtime.sendMessage({ action: 'save-resource' }, (response) => {
       setStatus('saved');
       setTimeout(() => setStatus('idle'), 2000);
     });

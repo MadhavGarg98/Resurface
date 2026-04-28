@@ -3,6 +3,30 @@ import { init as initContextMenus } from './contextMenus.js';
 import { init as initTabListener } from './tabListener.js';
 import { init as initAlarms } from './alarms.js';
 import { init as initMessageHandler } from './messageHandler.js';
+import { getResources } from '../utils/storage.js';
+
+// Update extension badge with resource count
+async function updateBadgeCount() {
+  try {
+    const resources = await getResources();
+    const count = resources.length;
+    chrome.action.setBadgeText({ text: count > 0 ? count.toString() : '' });
+    chrome.action.setBadgeBackgroundColor({ color: '#C49A6C' });
+  } catch (error) {
+    console.error('[Badge] Failed to update:', error);
+  }
+}
+
+// Initial count
+updateBadgeCount();
+
+// Listen for storage changes to update badge in real-time
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.resources) {
+    const count = changes.resources.newValue.length;
+    chrome.action.setBadgeText({ text: count > 0 ? count.toString() : '' });
+  }
+});
 
 console.log('Resurface background service worker started');
 
@@ -37,6 +61,14 @@ console.log('All background modules initialized');
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Background] Message received:', message.action);
 
+  // Trigger save from popup button
+  if (message.action === 'save-resource') {
+    handleSaveCommand()
+      .then(() => sendResponse({ success: true }))
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
   // Create project and assign resource
   if (message.action === 'CREATE_PROJECT_AND_ASSIGN') {
     handleCreateAndAssign(message.data)
@@ -70,16 +102,50 @@ async function handleCreateAndAssign(data) {
   
   // Assign resource
   const { updateResource } = await import('../utils/storage.js');
-  await updateResource(resourceId, { projectId: newProject.id });
+  await updateResource(resourceId, { 
+    title: data.resourceTitle || undefined, // Update title if provided
+    projectId: newProject.id,
+    tags: data.tags || [],
+    _needsConfirmation: false 
+  });
   
+  // Show success notification
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('icons/favicon.png'),
+    title: '✅ Project Created',
+    message: `"${projectName}" created and resource assigned successfully.`,
+    priority: 1
+  });
+
   console.log('[Background] Created project & assigned:', newProject.name);
   return { success: true, projectId: newProject.id };
 }
 
 async function handleAssignProject(data) {
-  const { resourceId, projectId } = data;
-  const { updateResource } = await import('../utils/storage.js');
-  await updateResource(resourceId, { projectId });
+  const { resourceId, projectId, resourceTitle, tags } = data;
+  const { updateResource, getProjects } = await import('../utils/storage.js');
+  
+  const updated = await updateResource(resourceId, { 
+    projectId,
+    title: resourceTitle || undefined,
+    tags: tags || undefined,
+    _needsConfirmation: false,
+    _pendingClassification: null
+  });
+
+  // Get project name for notification
+  const projects = await getProjects();
+  const project = projects.find(p => p.id === projectId);
+
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('icons/favicon.png'),
+    title: '📌 Resource Assigned',
+    message: `Saved to "${project?.name || 'Project'}".`,
+    priority: 1
+  });
+
   console.log('[Background] Assigned to project:', projectId);
   return { success: true };
 }

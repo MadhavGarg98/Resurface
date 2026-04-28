@@ -21,13 +21,15 @@ export default function ClassificationConfirm({
   const [showAllOptions, setShowAllOptions] = useState(false);
   const [timeLeft, setTimeLeft] = useState(25);
   const [isCreating, setIsCreating] = useState(false);
+  const [resourceTitle, setResourceTitle] = useState(resource?.title || 'Untitled');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   
   // Auto-dismiss timer
   useEffect(() => {
     if (timeLeft <= 0) {
       // Auto-confirm with best match
       if (selectedProjectId) {
-        onConfirm(selectedProjectId, classification.suggestedTags);
+        onConfirm(selectedProjectId, classification.suggestedTags, resourceTitle);
       } else {
         onDismiss();
       }
@@ -56,11 +58,28 @@ export default function ClassificationConfirm({
           alt="AI Assistant" 
         />
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-[#3D3832]">
-            {classification.projectId ? 'Add to this project?' : 'Where should this go?'}
-          </h3>
-          <p className="text-xs text-[#A8A29E] mt-0.5">
-            {classification.reasoning || 'AI needs help classifying this resource'}
+          <div className="flex items-center gap-2">
+            {isEditingTitle ? (
+              <input 
+                value={resourceTitle}
+                onChange={(e) => setResourceTitle(e.target.value)}
+                onBlur={() => setIsEditingTitle(false)}
+                onKeyDown={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
+                autoFocus
+                className="text-xs font-bold text-[#3D3832] bg-white border border-[#C49A6C] rounded px-2 py-0.5 w-full outline-none"
+              />
+            ) : (
+              <h3 
+                className="text-sm font-semibold text-[#3D3832] truncate cursor-pointer hover:text-[#C49A6C] flex items-center gap-1.5"
+                onClick={() => setIsEditingTitle(true)}
+              >
+                {resourceTitle}
+                <Edit3 className="w-3 h-3 text-[#A8A29E]" />
+              </h3>
+            )}
+          </div>
+          <p className="text-[10px] text-[#A8A29E] mt-0.5 uppercase font-bold tracking-wider">
+            {classification.projectId ? 'Project Suggestion' : 'Needs Classification'}
           </p>
           
           {/* Confidence bar */}
@@ -178,7 +197,7 @@ export default function ClassificationConfirm({
       {/* Action Buttons */}
       <div className="flex gap-2 mt-3">
         <button
-          onClick={() => onConfirm(selectedProjectId, classification.suggestedTags)}
+          onClick={() => onConfirm(selectedProjectId, classification.suggestedTags, resourceTitle)}
           disabled={!selectedProjectId}
           className="flex-1 h-9 bg-[#C49A6C] text-white text-sm font-bold rounded-lg hover:bg-[#B5895B] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-[#C49A6C]/20"
         >
@@ -199,7 +218,7 @@ export default function ClassificationConfirm({
             suggestion={classification.suggestedNewProject}
             resource={resource}
             onCreated={(projectId) => {
-              onConfirm(projectId, classification.suggestedTags);
+              onConfirm(projectId, classification.suggestedTags, resourceTitle);
               setIsCreating(false);
             }}
             onCancel={() => setIsCreating(false)}

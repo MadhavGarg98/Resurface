@@ -38,7 +38,7 @@ export default function App() {
     console.log('[Popup] Sidebar enabled:', newState);
   };
 
-  const handleConfirmClassification = async (projectId, tags) => {
+  const handleConfirmClassification = async (projectId, tags, title = null) => {
     if (!pendingClassification) return;
     
     const { resource } = pendingClassification;
@@ -53,11 +53,14 @@ export default function App() {
     }
     
     if (resourceId) {
-      await updateResource(resourceId, { 
-        projectId, 
-        tags: [...new Set([...(resource.tags || []), ...(tags || [])])],
-        _needsConfirmation: false,
-        _pendingClassification: null
+      chrome.runtime.sendMessage({
+        action: 'ASSIGN_TO_PROJECT',
+        data: {
+          resourceId,
+          projectId,
+          resourceTitle: title || resource.title,
+          tags: [...new Set([...(resource.tags || []), ...(tags || [])])]
+        }
       });
     }
     
@@ -189,13 +192,6 @@ export default function App() {
                   className="p-1.5 text-[#A8A29E] hover:text-[#C49A6C] hover:bg-[#FAF8F5] rounded-lg transition-all"
                 >
                   <Pin size={16} />
-                </button>
-                <button
-                  onClick={testSave}
-                  title="Diagnostic Save"
-                  className="p-1.5 text-[#A8A29E] hover:text-[#C49A6C] hover:bg-[#FAF8F5] rounded-lg transition-all"
-                >
-                  <Database size={16} />
                 </button>
                 <button
                   onClick={() => setView('settings')}
