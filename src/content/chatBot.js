@@ -236,7 +236,7 @@
       .rmc-bot-message { align-self: flex-start; max-width: 85%; padding: 12px 16px; background: #FFFFFF; border: 1px solid #E8E2D6; border-radius: 16px 16px 16px 4px; font-size: 13px; line-height: 1.6; color: #3D3832; }
       .rmc-user-message { align-self: flex-end; max-width: 85%; padding: 12px 16px; background: #3D3832; color: #FFFFFF; border-radius: 16px 16px 4px 16px; font-size: 13px; line-height: 1.6; }
       .rmc-input-area { display: flex; align-items: center; padding: 16px; border-top: 1px solid #E8E2D6; background: #FFFFFF; gap: 10px; }
-      .rmc-input { flex: 1; height: 40px; padding: 0 16px; border: 1px solid #E8E2D6; border-radius: 20px; font-size: 13px; outline: none; background: #FAF8F5; }
+      .rmc-input { flex: 1; height: 40px; padding: 0 16px; border: 1px solid #E8E2D6; border-radius: 20px; font-size: 13px; outline: none; background: #FAF8F5; color: #3D3832; }
       .rmc-input:focus { border-color: #C49A6C; background: #FFFFFF; }
       .rmc-send-btn { width: 40px; height: 40px; background: #C49A6C; color: #FFFFFF; border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; }
       .rmc-send-btn:hover { background: #B5895B; transform: scale(1.05); }

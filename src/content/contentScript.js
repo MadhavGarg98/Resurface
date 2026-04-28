@@ -28,7 +28,7 @@
     }
 
     if (action === 'SHOW_PROJECT_POPUP') {
-      showProjectCreationPopup(data);
+      showProjectPopup(data);
       sendResponse({ success: true });
       return true;
     }
@@ -202,135 +202,266 @@
   // ============================================
   // PROJECT CREATION POPUP (SMART MODAL)
   // ============================================
-  function showProjectCreationPopup(data) {
-    const { resource, suggestedProject, classification } = data;
+  function showProjectPopup(data) {
+    console.log('[Popup] Showing project popup:', data);
     
     // Remove existing
     const existing = document.getElementById('rs-project-popup');
     if (existing) existing.remove();
-
-    const isMatch = classification?.decision === 'MATCH' || (classification?.projectId && classification?.confidence > 50);
-    const projectName = isMatch 
-      ? (classification.alternatives?.find(a => a.projectId === classification.projectId)?.projectName || 'Matched Project')
-      : (suggestedProject?.name || 'New Project');
-    const keywords = (suggestedProject?.keywords || []).join(', ');
-    const resourceTitle = (resource?.title || 'Untitled').substring(0, 50);
-
+    
+    const { resourceId, resourceTitle, matches, suggestedProject } = data;
+    let secondsLeft = data.timeout || 30;
+    const titlePreview = (resourceTitle || 'Untitled').substring(0, 55);
+    
+    // Build match list HTML
+    let matchListHTML = '';
+    const hasMatches = matches && matches.length > 0;
+    
+    if (hasMatches) {
+      matchListHTML = `
+        <div style="margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:600;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">
+            📊 Suggested Projects
+          </div>
+          ${matches.slice(0, 3).map((m, i) => `
+            <div class="rs-match-option ${i === 0 ? 'rs-selected' : ''}" 
+                 data-project-id="${m.projectId}"
+                 style="padding:10px 14px;margin-bottom:6px;border:2px solid ${i === 0 ? '#F5A623' : '#eee'};border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;background:${i === 0 ? '#FFF8E7' : 'white'};transition:all 0.15s;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:13px;color:#1a1a1a;">📁 ${escapeHTML(m.projectName)}</div>
+                <div style="font-size:11px;color:#999;margin-top:2px;">${escapeHTML(m.matchReason || '')}</div>
+              </div>
+              <div style="flex-shrink:0;margin-left:12px;text-align:right;">
+                <span style="font-weight:700;font-size:16px;color:${m.score >= 50 ? '#4CAF50' : m.score >= 25 ? '#F5A623' : '#999'};">${m.score}%</span>
+                ${i === 0 ? '<span style="font-size:10px;color:#4CAF50;display:block;">Best Match</span>' : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        
+        <div style="text-align:center;margin:16px 0;color:#ccc;font-size:12px;">── OR ──</div>
+      `;
+    }
+    
+    // Build create form
+    const createHTML = `
+      <div style="margin-bottom:4px;">
+        <div style="font-size:12px;font-weight:600;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">
+          ✨ Create New Project
+        </div>
+        <div style="margin-bottom:10px;">
+          <input id="rs-proj-name" type="text" 
+            value="${escapeHTML(suggestedProject?.name || '')}"
+            placeholder="Project name"
+            style="width:100%;padding:10px 14px;border:2px solid #eee;border-radius:10px;font-size:13px;box-sizing:border-box;outline:none;"
+            onfocus="this.style.borderColor='#F5A623'"
+            onblur="this.style.borderColor='#eee'">
+        </div>
+        <div style="margin-bottom:4px;">
+          <input id="rs-proj-keywords" type="text"
+            value="${escapeHTML((suggestedProject?.keywords || []).join(', '))}"
+            placeholder="Keywords (comma separated)"
+            style="width:100%;padding:10px 14px;border:2px solid #eee;border-radius:10px;font-size:13px;box-sizing:border-box;outline:none;"
+            onfocus="this.style.borderColor='#F5A623'"
+            onblur="this.style.borderColor='#eee'">
+        </div>
+        <div style="padding:8px 12px;background:#FFF8E7;border-radius:8px;font-size:11px;color:#996600;">
+          🔗 Future saves from this site will auto-go to this project
+        </div>
+      </div>
+    `;
+    
+    // Build complete popup
     const popup = document.createElement('div');
     popup.id = 'rs-project-popup';
     popup.innerHTML = `
-      <div style="position:fixed;top:24px;right:24px;z-index:2147483645;font-family: 'Inter', -apple-system, sans-serif;pointer-events:none;">
-        <div style="background:white;border-radius:24px;width:340px;box-shadow:0 24px 64px rgba(61, 56, 50, 0.18);border:1px solid #E8E2D6;overflow:hidden;animation:rsPopupSlideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);pointer-events:auto;">
-          
-          <div style="padding:20px 24px;border-bottom:1px solid #E8E2D6;background:#FFFFFF;">
-            <div style="font-size:15px;font-weight:800;color:#3D3832;display:flex;align-items:center;gap:10px;">
-              <div style="width:24px;height:24px;background:#C49A6C;border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 8px rgba(196, 154, 108, 0.3);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4"><path d="M5 12h14m-7-7v14"/></svg>
-              </div>
-              ${isMatch ? 'Confirm Assignment' : 'Create New Project'}
-            </div>
-            <div style="font-size:11px;color:#A8A29E;margin-top:4px;font-weight:500;">
-              ${isMatch ? 'AI found a likely project match' : 'No matching project found for this site'}
-            </div>
+      <div style="
+        position:fixed;top:16px;right:24px;width:380px;max-width:calc(100vw-24px);max-height:80vh;overflow-y:auto;
+        background:white;border-radius:16px;box-shadow:0 12px 50px rgba(0,0,0,0.2);z-index:2147483647;
+        font-family:system-ui,sans-serif;animation:rsSlideIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+      ">
+        <!-- Header -->
+        <div style="padding:18px 20px 14px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:15px;font-weight:700;color:#1a1a1a;">📁 Where should this go?</div>
+            <div style="font-size:12px;color:#999;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(titlePreview)}</div>
           </div>
-          
-          <div style="padding:20px 24px;background:#FAF8F5;">
-            <div style="margin-bottom:16px;">
-              <label style="font-size:10px;font-weight:800;color:#3D3832;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;">Resource Title</label>
-              <input id="rs-res-title" type="text" value="${escapeHTML(resource?.title || 'Untitled')}" style="width:100%;padding:10px 14px;border:1px solid #E8E2D6;border-radius:12px;font-size:13px;box-sizing:border-box;outline:none;transition:all 0.2s;background:white;color:#3D3832;font-weight:600;" onfocus="this.style.borderColor='#C49A6C';this.style.boxShadow='0 0 0 3px rgba(196,154,108,0.1)'" onblur="this.style.borderColor='#E8E2D6';this.style.boxShadow='none'">
-            </div>
-            
-            <div style="margin-bottom:16px;">
-              <label style="font-size:10px;font-weight:800;color:#3D3832;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;">Project Name</label>
-              <input id="rs-proj-name" type="text" value="${escapeHTML(projectName)}" style="width:100%;padding:10px 14px;border:1px solid #E8E2D6;border-radius:12px;font-size:13px;box-sizing:border-box;outline:none;transition:all 0.2s;background:white;color:#3D3832;font-weight:600;" onfocus="this.style.borderColor='#C49A6C';this.style.boxShadow='0 0 0 3px rgba(196,154,108,0.1)'" onblur="this.style.borderColor='#E8E2D6';this.style.boxShadow='none'">
-            </div>
-            
-            <div style="margin-bottom:16px;">
-              <label style="font-size:10px;font-weight:800;color:#3D3832;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;">Keywords</label>
-              <input id="rs-proj-keywords" type="text" value="${escapeHTML(keywords)}" style="width:100%;padding:10px 14px;border:1px solid #E8E2D6;border-radius:12px;font-size:13px;box-sizing:border-box;outline:none;transition:all 0.2s;background:white;color:#3D3832;font-weight:600;" placeholder="e.g. news, tech" onfocus="this.style.borderColor='#C49A6C';this.style.boxShadow='0 0 0 3px rgba(196,154,108,0.1)'" onblur="this.style.borderColor='#E8E2D6';this.style.boxShadow='none'">
-            </div>
-            
-            <div style="font-size:10px;color:#B5895B;padding:10px 12px;background:#FFFDF7;border-radius:10px;border:1px solid #FFEBA0;font-weight:500;line-height:1.4;">
-              💡 <strong>Resurface AI:</strong> ${isMatch ? 'This resource matches your existing project perfectly.' : 'Future saves from this domain will automatically group here.'}
-            </div>
+          <div style="flex-shrink:0;margin-left:12px;text-align:center;">
+            <div id="rs-timer" style="width:38px;height:38px;border-radius:50%;border:3px solid #F5A623;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#F5A623;">${secondsLeft}</div>
+            <div style="font-size:9px;color:#999;margin-top:2px;">auto</div>
           </div>
-          
-          <div style="padding:16px 24px 24px;background:white;border-top:1px solid #E8E2D6;display:flex;gap:10px;">
-            <button id="rs-create-btn" style="flex:2;padding:12px;background:#C49A6C;color:white;border:none;border-radius:14px;font-weight:800;cursor:pointer;font-size:13px;transition:all 0.2s;box-shadow:0 4px 12px rgba(196, 154, 108, 0.3);" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(196, 154, 108, 0.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 12px rgba(196, 154, 108, 0.3)'">
-              ${isMatch ? '✓ Confirm & Save' : 'Confirm & Save'}
-            </button>
-            <button id="rs-skip-btn" style="flex:1;padding:12px;background:white;border:1px solid #E8E2D6;border-radius:14px;cursor:pointer;font-size:13px;color:#A8A29E;font-weight:700;transition:all 0.2s;">Skip</button>
-          </div>
+        </div>
+        
+        <!-- Content -->
+        <div style="padding:16px 20px;">
+          ${matchListHTML}
+          ${createHTML}
+        </div>
+        
+        <!-- Actions -->
+        <div style="padding:14px 20px;border-top:1px solid #f0f0f0;display:flex;gap:10px;">
+          <button id="rs-confirm-btn" style="
+            flex:1;padding:12px;background:#F5A623;color:white;border:none;border-radius:10px;font-weight:600;
+            font-size:13px;cursor:pointer;transition:all 0.15s;
+          " onmouseover="this.style.background='#E09510'" onmouseout="this.style.background='#F5A623'">
+            ✓ Confirm
+          </button>
+          <button id="rs-skip-btn" style="
+            padding:12px 20px;background:transparent;border:2px solid #eee;border-radius:10px;
+            font-size:13px;color:#999;cursor:pointer;font-weight:500;transition:all 0.15s;
+          " onmouseover="this.style.borderColor='#ddd';this.style.color='#666'" onmouseout="this.style.borderColor='#eee';this.style.color='#999'">
+            Skip
+          </button>
         </div>
       </div>
       <style>
-        @keyframes rsPopupSlideIn {
-          from { opacity:0; transform: translateX(40px); }
-          to { opacity:1; transform: translateX(0); }
+        @keyframes rsSlideIn {
+          from { opacity:0; transform:translateY(-15px) scale(0.95); }
+          to { opacity:1; transform:translateY(0) scale(1); }
         }
+        .rs-match-option:hover { border-color:#F5A623 !important; }
+        .rs-match-option.rs-selected { border-color:#F5A623 !important; background:#FFF8E7 !important; }
       </style>
     `;
-
+    
     document.body.appendChild(popup);
-
-    popup.querySelector('#rs-create-btn').onclick = async () => {
-      const name = popup.querySelector('#rs-proj-name').value.trim();
-      const keywords = popup.querySelector('#rs-proj-keywords').value.split(',').map(k => k.trim()).filter(k => k);
-      const resTitle = popup.querySelector('#rs-res-title').value.trim();
-
-      if (!name) {
-        alert('Please enter a project name');
-        return;
+    
+    // State
+    let selectedProjectId = hasMatches ? matches[0].projectId : null;
+    let isCreatingNew = !hasMatches;
+    
+    // Timer
+    const timerEl = popup.querySelector('#rs-timer');
+    const timerInterval = setInterval(() => {
+      secondsLeft--;
+      if (timerEl) {
+        timerEl.textContent = secondsLeft;
+        if (secondsLeft <= 5) {
+          timerEl.style.borderColor = '#E57373';
+          timerEl.style.color = '#E57373';
+        }
       }
-
-      if (isMatch && classification?.projectId) {
-        chrome.runtime.sendMessage({
-          action: 'ASSIGN_TO_PROJECT',
-          data: {
-            resourceId: resource.id,
-            resourceTitle: resTitle,
-            projectId: classification.projectId
-          }
-        }, (response) => {
-          popup.remove();
-          if (response?.success) {
-            showToast('✅ Resource assigned!');
-          }
+      
+      if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        popup.remove();
+        console.log('[Popup] Timer expired - auto-saving');
+        
+        if (selectedProjectId) {
+          assignToProject(resourceId, selectedProjectId);
+          showToast('✅ Auto-assigned to project');
+        } else {
+          showToast('💾 Saved without project');
+        }
+      }
+    }, 1000);
+    
+    // Match Option Clicks
+    popup.querySelectorAll('.rs-match-option').forEach(option => {
+      option.addEventListener('click', () => {
+        popup.querySelectorAll('.rs-match-option').forEach(o => {
+          o.classList.remove('rs-selected');
+          o.style.borderColor = '#eee';
+          o.style.background = 'white';
         });
-      } else {
+        option.classList.add('rs-selected');
+        option.style.borderColor = '#F5A623';
+        option.style.background = '#FFF8E7';
+        
+        selectedProjectId = option.dataset.projectId;
+        isCreatingNew = false;
+        
+        const nameInput = popup.querySelector('#rs-proj-name');
+        const keywordsInput = popup.querySelector('#rs-proj-keywords');
+        if (nameInput) nameInput.value = '';
+        if (keywordsInput) keywordsInput.value = '';
+      });
+    });
+    
+    // Create form focus -> switch to create mode
+    const nameInput = popup.querySelector('#rs-proj-name');
+    const keywordsInput = popup.querySelector('#rs-proj-keywords');
+    
+    if (nameInput) {
+      nameInput.addEventListener('focus', () => {
+        isCreatingNew = true;
+        selectedProjectId = null;
+        popup.querySelectorAll('.rs-match-option').forEach(o => {
+          o.classList.remove('rs-selected');
+          o.style.borderColor = '#eee';
+          o.style.background = 'white';
+        });
+      });
+    }
+    
+    // Confirm Button
+    popup.querySelector('#rs-confirm-btn').addEventListener('click', () => {
+      clearInterval(timerInterval);
+      
+      if (isCreatingNew || !selectedProjectId) {
+        const name = nameInput?.value?.trim();
+        if (!name) {
+          nameInput?.focus();
+          nameInput?.style.setProperty('border-color', '#E57373', 'important');
+          return;
+        }
+        
+        const keywords = keywordsInput?.value
+          ?.split(',').map(k => k.trim()).filter(k => k) || [];
+        
+        popup.remove();
+        
         chrome.runtime.sendMessage({
-          action: 'CREATE_PROJECT_AND_ASSIGN',
+          action: 'CREATE_AND_ASSIGN_PROJECT',
           data: {
-            resourceId: resource.id,
-            resourceTitle: resTitle,
+            resourceId: resourceId,
             projectName: name,
             keywords: keywords,
             relatedUrls: suggestedProject?.relatedUrls || [],
-            tags: classification?.suggestedTags || []
+            color: suggestedProject?.color || '#F5A623'
           }
         }, (response) => {
-          popup.remove();
-          if (response?.success) {
-            showToast('✅ Project created & saved!');
-          }
+          if (response?.success) showToast('✅ Project created & saved!');
+          else showToast('❌ Error. Try again.');
         });
+      } else {
+        popup.remove();
+        assignToProject(resourceId, selectedProjectId);
+        showToast('✅ Saved to project!');
+      }
+    });
+    
+    // Skip Button
+    popup.querySelector('#rs-skip-btn').addEventListener('click', () => {
+      clearInterval(timerInterval);
+      popup.remove();
+      showToast('💾 Saved without project');
+    });
+    
+    // Keyboard Shortcuts
+    const keyHandler = (e) => {
+      if (e.key === 'Escape') {
+        clearInterval(timerInterval);
+        popup.remove();
+        showToast('💾 Saved without project');
+        document.removeEventListener('keydown', keyHandler);
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        popup.querySelector('#rs-confirm-btn')?.click();
       }
     };
+    document.addEventListener('keydown', keyHandler);
+  }
 
-    popup.querySelector('#rs-skip-btn').onclick = () => {
-      chrome.runtime.sendMessage({
-        action: 'DISMISS_CLASSIFICATION',
-        data: { resourceId: resource.id }
-      }, () => {
-        popup.remove();
-        showToast('Saved to library');
-      });
-    };
-
-    // Close on backdrop click
-    popup.onclick = (e) => {
-      if (e.target === popup) popup.remove();
-    };
+  // ============================================
+  // HELPER: Assign resource to project
+  // ============================================
+  function assignToProject(resourceId, projectId) {
+    chrome.runtime.sendMessage({
+      action: 'ASSIGN_TO_PROJECT',
+      data: { resourceId, projectId }
+    });
   }
 
   // ============================================

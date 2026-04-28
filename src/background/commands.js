@@ -26,9 +26,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { saveResource } from '../utils/storage.js';
 import { detectPageType } from '../utils/pageTypeDetector.js';
 import { generateSummary, generateBulletSummary } from '../utils/summarizer.js';
-import { categorizeResource } from '../utils/categorizer.js';
 import { extractDeadline } from '../utils/deadlineParser.js';
-import { findMatchingProject } from '../utils/projectMatcher.js';
+import { findMatchingProject, getAllProjectMatches } from '../utils/projectMatcher.js';
 
 // Main save handler — called when user presses Ctrl+Shift+S
 async function handleSaveCommand() {
@@ -172,59 +171,63 @@ async function handleSaveCommand() {
     // STEP 6: INTELLIGENT CATEGORIZATION
     // ==========================================
     try {
-      // 6.1 Fast Match (Local)
-      const localMatch = await findMatchingProject(resource);
-      
-      if (localMatch.confidence >= 80 && localMatch.projectId) {
-        resource.projectId = localMatch.projectId;
-        console.log(`[Save] Fast Match: ${localMatch.projectName}`);
-      } else {
-        // AI consultation (optional, but let's keep it if confident)
-        const aiMatch = await categorizeResource(resource);
-        
-        // Update title if AI suggested a better one and current is poor
-        if (aiMatch.suggestedResourceTitle && (resource.title === 'Untitled' || resource.title.length < 5)) {
-          resource.title = aiMatch.suggestedResourceTitle;
-          await updateResource(resource.id, { title: resource.title });
-          console.log(`[Save] AI renamed resource to: ${resource.title}`);
-        }
+      const matchResult = await findMatchingProject(resource);
+      console.log('[Save] Match result:', {
+        projectName: matchResult.projectName,
+        confidence: matchResult.confidence,
+        isNew: matchResult.isNew
+      });
 
-        if (aiMatch.decision === 'MATCH' && aiMatch.confidence >= 85) {
-          resource.projectId = aiMatch.projectId;
-          await updateResource(resource.id, { 
-            projectId: resource.projectId,
-            tags: aiMatch.suggestedTags || []
-          });
-        } else {
-          // No confident match — trigger project creation popup
-          resource.projectId = null;
-          resource._needsConfirmation = true;
-          
-          // Generate suggested project
-          const suggested = {
-            name: getSuggestedProjectName(tab.url),
-            keywords: getSuggestedKeywords(resource),
-            relatedUrls: getSuggestedUrls(tab.url)
-          };
-          
-          // Send popup to the page
-          try {
-            await chrome.tabs.sendMessage(tab.id, {
-              action: 'SHOW_PROJECT_POPUP',
-              data: {
-                resource: { ...resource, id: resource.id || uuidv4() }, // Ensure ID for the popup
-                suggestedProject: suggested
-              }
-            });
-            console.log('[Save] Project creation popup sent');
-          } catch (e) {
-            console.warn('[Save] Could not show popup:', e.message);
+      if (matchResult.confidence >= 70 && matchResult.projectId) {
+        // HIGH CONFIDENCE - Auto assign
+        resource.projectId = matchResult.projectId;
+        resource.tags = matchResult.suggestedTags || [];
+        resource._needsConfirmation = false;
+        
+        console.log(`[Save] Auto-assigned to: ${matchResult.projectName} (${matchResult.confidence}%)`);
+        
+      } else if (matchResult.confidence >= 40 && matchResult.projectId) {
+        // MEDIUM CONFIDENCE - Show popup with best match pre-selected
+        resource.projectId = null;
+        resource._needsConfirmation = true;
+        
+        const allMatches = await getAllProjectMatches(resource);
+        
+        chrome.tabs.sendMessage(tab.id, {
+          action: 'SHOW_PROJECT_POPUP',
+          data: {
+            resourceId: resource.id,
+            resourceTitle: resource.title,
+            matches: allMatches,
+            suggestedProject: matchResult.suggestedProject || generateDefaultSuggestion(tab.url, resource.title),
+            timeout: 30
           }
-        }
+        }).catch(err => console.warn('[Save] Popup failed:', err.message));
+        
+      } else {
+        // LOW CONFIDENCE - Show popup focused on create new
+        resource.projectId = null;
+        resource._needsConfirmation = true;
+        
+        const allMatches = await getAllProjectMatches(resource);
+        const suggestion = matchResult.suggestedProject || generateDefaultSuggestion(tab.url, resource.title);
+        
+        chrome.tabs.sendMessage(tab.id, {
+          action: 'SHOW_PROJECT_POPUP',
+          data: {
+            resourceId: resource.id,
+            resourceTitle: resource.title,
+            matches: allMatches,
+            suggestedProject: suggestion,
+            timeout: 30
+          }
+        }).catch(err => console.warn('[Save] Popup failed:', err.message));
       }
+      
     } catch (error) {
-      console.warn('Categorization pipeline failed:', error);
+      console.error('[Save] Categorization failed:', error);
       resource.projectId = null;
+      resource._needsConfirmation = true;
     }
     
     // ==========================================
@@ -866,30 +869,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
     return true;
   }
-  
-  if (msg.action === 'CREATE_PROJECT_AND_ASSIGN') {
-    const { name, keywords, resourceId, tags } = msg.data;
-    
-    import('../utils/storage.js').then(async (storage) => {
-      const newProj = await storage.saveProject({
-        id: uuidv4(),
-        name,
-        keywords: keywords || [],
-        archived: false,
-        createdAt: new Date().toISOString(),
-        color: '#F5A623'
-      });
-      
-      await storage.updateResource(resourceId, {
-        projectId: newProj.id,
-        tags: tags || [],
-        _needsConfirmation: false
-      });
-      
-      sendResponse({ ok: true });
-    });
-    return true;
-  }
+
 
   if (msg.action === 'DISMISS_CLASSIFICATION') {
     const { resourceId } = msg.data;

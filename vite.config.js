@@ -8,7 +8,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    modulePreload: false,
+    modulePreload: { polyfill: false },
     rollupOptions: {
       input: {
         popup: fileURLToPath(new URL('./index.html', import.meta.url)),
