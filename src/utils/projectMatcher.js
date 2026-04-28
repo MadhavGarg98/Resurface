@@ -2,13 +2,40 @@ import { getProjects } from './storage.js';
 import { callLLM } from './llmClient.js';
 
 /**
- * AI-POWERED SEMANTIC PROJECT MATCHER
- * Uses LLM to understand topic relationships, not just string matching
+ * AI-POWERED SEMANTIC PROJECT MATCHER v4
+ * 
+ * Key fixes in v4:
+ *   - Content aggregator domains (wikipedia, youtube, github, etc.) are EXCLUDED
+ *     from URL pattern matching. "wikipedia.org/*" on a project does NOT mean every
+ *     Wikipedia article belongs to that project.
+ *   - AI fallback when rate-limited always caps confidence at 40 → forces popup
+ *   - Stricter AI prompt with explicit "DO NOT" rules
  */
 
+// Content aggregator domains — the domain alone tells us NOTHING about the topic
+const GENERIC_DOMAINS = [
+  'wikipedia.org', 'en.wikipedia.org',
+  'youtube.com', 'youtu.be',
+  'github.com', 'gitlab.com',
+  'medium.com', 'dev.to',
+  'reddit.com', 'twitter.com', 'x.com',
+  'stackoverflow.com', 'stackexchange.com',
+  'quora.com', 'linkedin.com',
+  'docs.google.com', 'drive.google.com',
+  'notion.so', 'figma.com',
+  'amazon.com', 'ebay.com'
+];
+
 /**
- * Find the best matching project for a resource
- * Uses fast local matching first, then AI for ambiguous cases
+ * Check if a domain is a generic content aggregator
+ */
+function isGenericDomain(domain) {
+  const d = domain.toLowerCase();
+  return GENERIC_DOMAINS.some(gd => d === gd || d.endsWith('.' + gd));
+}
+
+/**
+ * Find the best matching project for a resource.
  */
 export async function findMatchingProject(resource) {
   const projects = await getProjects();
@@ -26,11 +53,11 @@ export async function findMatchingProject(resource) {
 
   // Step 1: Fast local pre-filter (domain/URL matching)
   const localMatches = fastLocalMatch(resource, projects);
-  
-  // If we have a VERY strong local match, use it immediately (save API call)
   const bestLocal = localMatches[0];
-  if (bestLocal && bestLocal.score >= 80) {
-    console.log(`[ProjectMatcher] Fast match: "${bestLocal.projectName}" (${bestLocal.score}%)`);
+
+  // Only skip AI if local score is 90+ (specific URL match, NOT generic domain)
+  if (bestLocal && bestLocal.score >= 90) {
+    console.log(`[ProjectMatcher] ⚡ Exact URL match: "${bestLocal.projectName}" (${bestLocal.score}%)`);
     return {
       projectId: bestLocal.projectId,
       confidence: bestLocal.score,
@@ -40,31 +67,36 @@ export async function findMatchingProject(resource) {
       suggestCreate: false
     };
   }
-  
-  // Step 2: AI semantic matching for better accuracy
+
+  // Step 2: ALWAYS run AI semantic matching for accuracy
+  console.log('[ProjectMatcher] Running AI semantic matching...');
   try {
     const aiResult = await aiSemanticMatch(resource, projects, localMatches);
+    console.log('[ProjectMatcher] AI result:', {
+      projectName: aiResult.projectName,
+      confidence: aiResult.confidence
+    });
     return aiResult;
   } catch (error) {
-    console.error('[ProjectMatcher] AI matching failed, using local results:', error);
-    // Fallback to local matching
+    console.error('[ProjectMatcher] AI matching failed:', error);
+    
+    // CRITICAL: When AI fails, NEVER auto-assign. Cap confidence at 40 → forces popup.
     if (bestLocal && bestLocal.score >= 30) {
       return {
         projectId: bestLocal.projectId,
-        confidence: bestLocal.score,
+        confidence: Math.min(bestLocal.score, 40), // CAP at 40 — always show popup
         isNew: false,
-        matchReason: bestLocal.matchReason,
+        matchReason: bestLocal.matchReason + ' (unverified — AI unavailable)',
         projectName: bestLocal.projectName,
-        suggestCreate: bestLocal.score < 60
+        suggestCreate: true
       };
     }
     
-    // No good match
     return {
       projectId: null,
       confidence: 0,
       isNew: true,
-      matchReason: 'No matching project found',
+      matchReason: 'AI matching failed, no strong local match',
       suggestCreate: true,
       suggestedProject: await generateProjectSuggestion(resource)
     };
@@ -72,19 +104,23 @@ export async function findMatchingProject(resource) {
 }
 
 /**
- * Fast local matching based on URL and exact keywords
- * Returns scored projects sorted by score
+ * Fast local matching based on URL patterns and exact keywords.
+ * 
+ * IMPORTANT: Generic content aggregator domains (wikipedia.org, youtube.com, etc.)
+ * are EXCLUDED from URL matching because the domain tells us nothing about the topic.
+ * "Indian Cuisine" project having "wikipedia.org/*" should NOT match a Wikipedia
+ * article about "Artificial Intelligence in Healthcare".
  */
 function fastLocalMatch(resource, projects) {
   const url = resource.url || '';
   const title = (resource.title || '').toLowerCase();
-  const content = (resource.textContent || '').toLowerCase();
   
   let domain = '';
   try {
     domain = new URL(url).hostname.replace('www.', '');
   } catch(e) {}
   
+  const isGeneric = isGenericDomain(domain);
   const matches = [];
   
   for (const project of projects) {
@@ -93,14 +129,19 @@ function fastLocalMatch(resource, projects) {
     let score = 0;
     let reasons = [];
     
-    // URL pattern match (strong signal)
-    const relatedUrls = project.relatedUrls || [];
-    for (const pattern of relatedUrls) {
-      const clean = pattern.toLowerCase().replace(/\*/g, '').trim();
-      if (clean && (domain.includes(clean) || url.toLowerCase().includes(clean))) {
-        score += 40;
-        reasons.push('URL pattern match');
-        break;
+    // URL pattern match — BUT skip for generic domains
+    if (!isGeneric) {
+      const relatedUrls = project.relatedUrls || [];
+      for (const pattern of relatedUrls) {
+        const clean = pattern.toLowerCase().replace(/\*/g, '').trim();
+        // Skip generic domain patterns
+        if (clean && clean.length > 3 && !GENERIC_DOMAINS.some(gd => clean.includes(gd))) {
+          if (domain.includes(clean) || url.toLowerCase().includes(clean)) {
+            score += 40;
+            reasons.push('URL pattern match');
+            break;
+          }
+        }
       }
     }
     
@@ -133,12 +174,11 @@ function fastLocalMatch(resource, projects) {
 }
 
 /**
- * AI-powered semantic matching
- * Asks the LLM to determine which project a resource belongs to
+ * AI-powered semantic matching.
+ * The prompt is STRICT about not matching on weak/vague connections.
  */
 async function aiSemanticMatch(resource, projects, localMatches) {
   
-  // Build a concise project list for the AI
   const projectList = projects
     .filter(p => !p.archived)
     .map(p => ({
@@ -147,12 +187,26 @@ async function aiSemanticMatch(resource, projects, localMatches) {
       keywords: p.keywords || []
     }));
   
-  // Build local match hints
+  // Build local match hints (but warn AI they may be wrong)
   const localHints = localMatches.slice(0, 3).map(m => 
     `- "${m.projectName}" (local score: ${m.score}%, reason: ${m.matchReason})`
   ).join('\n');
   
-  const prompt = `You are matching a saved web resource to the CORRECT project. Think carefully about TOPIC RELATIONSHIPS — not just exact word matches.
+  const prompt = `You are matching a saved web resource to the CORRECT project.
+
+CRITICAL RULES:
+1. Only match if the resource's MAIN TOPIC clearly belongs to the project.
+2. If unsure, set confidence LOW (<40) and set noGoodMatch to true.
+3. NEVER match just because both items come from the same website (e.g. Wikipedia).
+
+DO NOT match based on:
+- Same website (e.g., two Wikipedia articles about DIFFERENT topics are NOT related)
+- Minor/vague keyword overlap
+- Broad category connections (e.g., "healthcare" ≠ "language and culture")
+
+DO match based on:
+- Clear topic relationship (e.g., "Food" → "Indian Cuisine" because cuisine IS food)
+- Direct subject overlap (e.g., "Python tutorial" → "Programming")
 
 RESOURCE:
 Title: "${resource.title || 'Untitled'}"
@@ -162,32 +216,19 @@ Content Preview: "${(resource.textContent || '').substring(0, 600)}"
 AVAILABLE PROJECTS:
 ${projectList.map(p => `- ID: "${p.id}", Name: "${p.name}", Keywords: [${p.keywords.join(', ')}]`).join('\n')}
 
-LOCAL MATCH HINTS (from basic URL/keyword matching):
-${localHints || 'No strong local matches'}
+${localHints ? `LOCAL HINTS (may be WRONG — verify semantically):\n${localHints}` : ''}
 
-YOUR TASK:
-1. Consider the MEANING and TOPIC of the resource
-2. Consider the MEANING of each project (from name + keywords)
-3. Find the BEST semantic match — even if words are different but topics are related
-   - Example: "Food" article → "Indian Cuisine" project (food ↔ cuisine are related)
-   - Example: "Python tutorial" → "Programming" project (Python ↔ programming)
-   - Example: "Champions League" → "Sports" project (Champions League ↔ sports)
-4. If multiple projects could match, rank them and explain why
-5. If no project matches well, be honest
-
-Return ONLY JSON (no markdown):
+Return ONLY valid JSON:
 {
   "bestMatch": {
-    "projectId": "id of best project or null",
-    "projectName": "name of best project",
-    "confidence": 85,
-    "reasoning": "Explain the semantic connection. E.g., 'Food is a core topic within Indian Cuisine' or 'Champions League is a sports tournament, matching the Sports project'"
+    "projectId": "id or null if no match",
+    "projectName": "name or null",
+    "confidence": 0-100,
+    "reasoning": "Explain WHY this topic belongs (or doesn't) to the project"
   },
-  "alternatives": [
-    { "projectId": "id", "projectName": "name", "confidence": 60, "reasoning": "..." }
-  ],
-  "noGoodMatch": false,
-  "suggestedTags": ["tag1", "tag2", "tag3"]
+  "alternatives": [],
+  "noGoodMatch": true,
+  "suggestedTags": ["tag1", "tag2"]
 }`;
 
   const result = await callLLM({
@@ -196,24 +237,35 @@ Return ONLY JSON (no markdown):
     temperature: 0.1
   });
   
-  // Parse response
   const parsed = parseAIResponse(result.text);
   
   console.log('[ProjectMatcher] AI decision:', {
     bestMatch: parsed.bestMatch?.projectName,
     confidence: parsed.bestMatch?.confidence,
+    noGoodMatch: parsed.noGoodMatch,
     reasoning: parsed.bestMatch?.reasoning
   });
   
-  // Determine action based on confidence
+  // If AI explicitly says no good match, respect that
+  if (parsed.noGoodMatch) {
+    return {
+      projectId: null,
+      confidence: 0,
+      isNew: true,
+      matchReason: parsed.bestMatch?.reasoning || 'AI found no good match',
+      suggestCreate: true,
+      suggestedProject: await generateProjectSuggestion(resource),
+      alternatives: parsed.alternatives || []
+    };
+  }
+  
   const confidence = parsed.bestMatch?.confidence || 0;
   const projectId = parsed.bestMatch?.projectId || null;
   
-  if (confidence >= 70 && projectId) {
-    // Good match - auto assign
+  if (confidence >= 75 && projectId) {
     return {
-      projectId: projectId,
-      confidence: confidence,
+      projectId,
+      confidence,
       isNew: false,
       matchReason: parsed.bestMatch.reasoning,
       projectName: parsed.bestMatch.projectName,
@@ -222,10 +274,9 @@ Return ONLY JSON (no markdown):
       alternatives: parsed.alternatives || []
     };
   } else if (confidence >= 40 && projectId) {
-    // Weak match - suggest but ask user
     return {
-      projectId: projectId,
-      confidence: confidence,
+      projectId,
+      confidence,
       isNew: false,
       matchReason: parsed.bestMatch.reasoning,
       projectName: parsed.bestMatch.projectName,
@@ -235,14 +286,14 @@ Return ONLY JSON (no markdown):
       alternatives: parsed.alternatives || []
     };
   } else {
-    // No match - suggest new project
     return {
       projectId: null,
       confidence: 0,
       isNew: true,
-      matchReason: 'No semantic match found',
+      matchReason: parsed.bestMatch?.reasoning || 'No semantic match found',
       suggestCreate: true,
-      suggestedProject: await generateProjectSuggestion(resource)
+      suggestedProject: await generateProjectSuggestion(resource),
+      alternatives: parsed.alternatives || []
     };
   }
 }
@@ -254,7 +305,6 @@ function parseAIResponse(text) {
   try {
     const cleaned = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(cleaned);
-    
     return {
       bestMatch: parsed.bestMatch || { projectId: null, projectName: null, confidence: 0, reasoning: '' },
       alternatives: parsed.alternatives || [],
@@ -273,36 +323,20 @@ function parseAIResponse(text) {
 }
 
 /**
- * Get all project matches with scores (for popup display)
+ * Get all project matches with scores (for popup display).
+ * Uses cheap local matching only — does NOT call AI again.
  */
 export async function getAllProjectMatches(resource) {
-  const result = await findMatchingProject(resource);
+  const projects = await getProjects();
+  if (!projects || projects.length === 0) return [];
   
-  const matches = [];
-  
-  if (result.projectId && result.confidence > 0) {
-    matches.push({
-      projectId: result.projectId,
-      projectName: result.projectName,
-      score: result.confidence,
-      matchReason: result.matchReason
-    });
-  }
-  
-  if (result.alternatives) {
-    for (const alt of result.alternatives) {
-      if (alt.projectId !== result.projectId) {
-        matches.push({
-          projectId: alt.projectId,
-          projectName: alt.projectName,
-          score: alt.confidence,
-          matchReason: alt.reasoning
-        });
-      }
-    }
-  }
-  
-  return matches.sort((a, b) => b.score - a.score);
+  const localMatches = fastLocalMatch(resource, projects);
+  return localMatches.map(m => ({
+    projectId: m.projectId,
+    projectName: m.projectName,
+    score: m.score,
+    matchReason: m.matchReason
+  }));
 }
 
 /**
@@ -340,33 +374,39 @@ Return ONLY JSON:
       keywords: parsed.keywords || [],
       description: parsed.description || '',
       color: getRandomColor(),
-      relatedUrls: getDomainUrls(resource.url)
+      relatedUrls: getSpecificUrls(resource.url)
     };
   } catch (e) {
-    // Fallback
     const words = (resource.title || '').split(' ').slice(0, 3);
     return {
       name: words.join(' ') || 'New Project',
       keywords: words,
       description: '',
       color: getRandomColor(),
-      relatedUrls: getDomainUrls(resource.url)
+      relatedUrls: getSpecificUrls(resource.url)
     };
+  }
+}
+
+/**
+ * Get relatedUrls — but NEVER for generic content platforms.
+ * "wikipedia.org/*" is useless. Only specific domains are meaningful.
+ */
+function getSpecificUrls(url) {
+  try {
+    const domain = new URL(url).hostname.replace('www.', '');
+    if (isGenericDomain(domain)) {
+      return []; // Don't suggest generic domains
+    }
+    return [`${domain}/*`];
+  } catch {
+    return [];
   }
 }
 
 function getRandomColor() {
   const colors = ['#F5A623', '#4CAF50', '#2196F3', '#9C27B0', '#E57373', '#FF9800', '#00BCD4'];
   return colors[Math.floor(Math.random() * colors.length)];
-}
-
-function getDomainUrls(url) {
-  try {
-    const domain = new URL(url).hostname.replace('www.', '');
-    return [`${domain}/*`];
-  } catch {
-    return [];
-  }
 }
 
 // Legacy support

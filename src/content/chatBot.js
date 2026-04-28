@@ -1,16 +1,18 @@
 // ============================================
-// RESURFACE ULTIMATE FLOATING CHAT v3.5
-// (Restored visuals + AI Integration)
+// RESURFACE ULTIMATE FLOATING CHAT v4
+// Draggable + AI Integration
 // ============================================
 
 (function() {
   if (window.self !== window.top) return;
-  if (window.__rs_chat_ultimate_v3) return;
-  window.__rs_chat_ultimate_v3 = true;
+  if (window.__rs_chat_ultimate_v4) return;
+  window.__rs_chat_ultimate_v4 = true;
 
   let chatElement = null;
   let chatButton = null;
   let isChatOpen = false;
+  let isDragging = false;
+  let dragStartX, dragStartY, dragStartRight, dragStartBottom;
 
   // Initialize from storage
   chrome.storage.local.get(['showFloatingChat'], (result) => {
@@ -38,18 +40,116 @@
   function createChatButton() {
     if (document.getElementById('resurface-chat-button')) return;
 
+    // Load saved position
+    const savedPos = JSON.parse(localStorage.getItem('resurface-chat-pos') || 'null');
+    const initRight = savedPos?.right ?? 24;
+    const initBottom = savedPos?.bottom ?? 24;
+
     chatButton = document.createElement('div');
     chatButton.id = 'resurface-chat-button';
+    chatButton.style.right = `${initRight}px`;
+    chatButton.style.bottom = `${initBottom}px`;
     chatButton.innerHTML = `
       <img 
         src="${chrome.runtime.getURL('icons/favicon.png')}" 
-        style="width: 28px; height: 28px; object-fit: contain;" 
+        style="width: 28px; height: 28px; object-fit: contain; pointer-events: none;" 
         alt="" 
       />
     `;
     chatButton.title = 'Ask Resurface about your saved resources';
     
-    chatButton.addEventListener('click', toggleChat);
+    // ---- DRAG + CLICK ----
+    chatButton.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isDragging = false;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      const rect = chatButton.getBoundingClientRect();
+      dragStartRight = window.innerWidth - rect.right;
+      dragStartBottom = window.innerHeight - rect.bottom;
+      
+      chatButton.style.cursor = 'grabbing';
+      chatButton.style.transform = 'scale(1.1)';
+      chatButton.style.boxShadow = '0 12px 32px rgba(61, 56, 50, 0.25)';
+      chatButton.style.transition = 'transform 0.1s, box-shadow 0.1s';
+
+      const onMove = (me) => {
+        const dx = me.clientX - dragStartX;
+        const dy = me.clientY - dragStartY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging = true;
+        if (isDragging) {
+          const newRight = Math.max(0, Math.min(window.innerWidth - 60, dragStartRight - dx));
+          const newBottom = Math.max(0, Math.min(window.innerHeight - 60, dragStartBottom - dy));
+          chatButton.style.right = `${newRight}px`;
+          chatButton.style.bottom = `${newBottom}px`;
+          chatButton.style.transition = 'transform 0.1s, box-shadow 0.1s';
+        }
+      };
+
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        chatButton.style.cursor = 'grab';
+        chatButton.style.transform = '';
+        chatButton.style.boxShadow = '';
+        chatButton.style.transition = '';
+        
+        if (isDragging) {
+          localStorage.setItem('resurface-chat-pos', JSON.stringify({
+            right: parseInt(chatButton.style.right),
+            bottom: parseInt(chatButton.style.bottom)
+          }));
+        } else {
+          toggleChat();
+        }
+      };
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    // Touch support
+    chatButton.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      isDragging = false;
+      dragStartX = touch.clientX;
+      dragStartY = touch.clientY;
+      const rect = chatButton.getBoundingClientRect();
+      dragStartRight = window.innerWidth - rect.right;
+      dragStartBottom = window.innerHeight - rect.bottom;
+
+      const onTouchMove = (te) => {
+        const t = te.touches[0];
+        const dx = t.clientX - dragStartX;
+        const dy = t.clientY - dragStartY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging = true;
+        if (isDragging) {
+          te.preventDefault();
+          const newRight = Math.max(0, Math.min(window.innerWidth - 60, dragStartRight - dx));
+          const newBottom = Math.max(0, Math.min(window.innerHeight - 60, dragStartBottom - dy));
+          chatButton.style.right = `${newRight}px`;
+          chatButton.style.bottom = `${newBottom}px`;
+          chatButton.style.transition = 'none';
+        }
+      };
+
+      const onTouchEnd = () => {
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
+        if (isDragging) {
+          localStorage.setItem('resurface-chat-pos', JSON.stringify({
+            right: parseInt(chatButton.style.right),
+            bottom: parseInt(chatButton.style.bottom)
+          }));
+        } else {
+          toggleChat();
+        }
+      };
+
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', onTouchEnd);
+    }, { passive: true });
+
     document.body.appendChild(chatButton);
   }
 
@@ -61,8 +161,24 @@
   function openChat() {
     if (chatElement) chatElement.remove();
     
+    // Position chat panel near the button
+    const btnRect = chatButton.getBoundingClientRect();
+    const isTopHalf = btnRect.top < window.innerHeight / 2;
+    const panelRight = window.innerWidth - btnRect.right;
+
     chatElement = document.createElement('div');
     chatElement.id = 'resurface-mini-chat';
+    
+    // Override position to follow button
+    chatElement.style.right = `${panelRight}px`;
+    if (isTopHalf) {
+      chatElement.style.top = `${btnRect.bottom + 12}px`;
+      chatElement.style.bottom = 'auto';
+    } else {
+      chatElement.style.bottom = `${window.innerHeight - btnRect.top + 12}px`;
+      chatElement.style.top = 'auto';
+    }
+
     chatElement.innerHTML = `
       <div class="rmc-header">
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -134,7 +250,7 @@
       if (response && response.text) {
         addMessage('bot', response.text);
         
-        // ADDED: Display clickable resource links
+        // Display clickable resource links
         if (response.matches && response.matches.length > 0) {
           const linksHtml = response.matches.map(m => `
             <div class="rmc-link-card" onclick="window.open('${m.url}', '_blank')">
@@ -201,15 +317,14 @@
     const styles = document.createElement('style');
     styles.id = 'resurface-chat-styles';
     styles.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
-      
       #resurface-chat-button {
         position: fixed; bottom: 24px; right: 24px;
         width: 56px; height: 56px; background: #FFFFFF;
         border: 2px solid #E8E2D6; border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        cursor: pointer; box-shadow: 0 4px 16px rgba(61, 56, 50, 0.12);
+        cursor: grab; box-shadow: 0 4px 16px rgba(61, 56, 50, 0.12);
         z-index: 2147483645; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none; touch-action: none;
       }
       #resurface-chat-button:hover {
         box-shadow: 0 8px 24px rgba(196, 154, 108, 0.25);
@@ -221,7 +336,7 @@
         border: 1px solid #E8E2D6; border-radius: 24px;
         box-shadow: 0 12px 48px rgba(61, 56, 50, 0.15);
         z-index: 2147483646; display: flex; flex-direction: column;
-        overflow: hidden; font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+        overflow: hidden; font-family: system-ui, -apple-system, sans-serif;
         animation: rsSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       }
       @keyframes rsSlideUp { from { opacity:0; transform:translateY(30px) scale(0.95); } to { opacity:1; transform:translateY(0) scale(1); } }

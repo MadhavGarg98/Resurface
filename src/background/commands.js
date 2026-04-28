@@ -172,60 +172,61 @@ async function handleSaveCommand() {
     // ==========================================
     try {
       const matchResult = await findMatchingProject(resource);
-      console.log('[Save] Match result:', {
+      console.log('[Save] Match result:', JSON.stringify({
         projectName: matchResult.projectName,
         confidence: matchResult.confidence,
-        isNew: matchResult.isNew
-      });
+        isNew: matchResult.isNew,
+        matchReason: matchResult.matchReason
+      }));
 
-      if (matchResult.confidence >= 70 && matchResult.projectId) {
-        // HIGH CONFIDENCE - Auto assign
+      // ==========================================
+      // STRICT THRESHOLD: Only auto-assign if VERY confident
+      // ==========================================
+      
+      if (matchResult.confidence >= 75 && matchResult.projectId && !matchResult.isNew) {
+        // HIGH CONFIDENCE ONLY - Auto assign without asking
         resource.projectId = matchResult.projectId;
         resource.tags = matchResult.suggestedTags || [];
         resource._needsConfirmation = false;
         
-        console.log(`[Save] Auto-assigned to: ${matchResult.projectName} (${matchResult.confidence}%)`);
-        
-      } else if (matchResult.confidence >= 40 && matchResult.projectId) {
-        // MEDIUM CONFIDENCE - Show popup with best match pre-selected
-        resource.projectId = null;
-        resource._needsConfirmation = true;
-        
-        const allMatches = await getAllProjectMatches(resource);
-        
-        chrome.tabs.sendMessage(tab.id, {
-          action: 'SHOW_PROJECT_POPUP',
-          data: {
-            resourceId: resource.id,
-            resourceTitle: resource.title,
-            matches: allMatches,
-            suggestedProject: matchResult.suggestedProject || generateDefaultSuggestion(tab.url, resource.title),
-            timeout: 30
-          }
-        }).catch(err => console.warn('[Save] Popup failed:', err.message));
+        console.log(`[Save] ✅ AUTO-ASSIGNED: "${matchResult.projectName}" (${matchResult.confidence}%)`);
         
       } else {
-        // LOW CONFIDENCE - Show popup focused on create new
+        // NOT CONFIDENT ENOUGH - Always show popup
         resource.projectId = null;
         resource._needsConfirmation = true;
         
+        // Get all possible matches (even weak ones) for the popup
         const allMatches = await getAllProjectMatches(resource);
-        const suggestion = matchResult.suggestedProject || generateDefaultSuggestion(tab.url, resource.title);
         
-        chrome.tabs.sendMessage(tab.id, {
-          action: 'SHOW_PROJECT_POPUP',
-          data: {
-            resourceId: resource.id,
-            resourceTitle: resource.title,
-            matches: allMatches,
-            suggestedProject: suggestion,
-            timeout: 30
-          }
-        }).catch(err => console.warn('[Save] Popup failed:', err.message));
+        // Generate or use suggested project
+        const suggestion = matchResult.suggestedProject || 
+                          await generateDefaultSuggestion(tab.url, resource.title, resource.textContent);
+        
+        console.log('[Save] 🤔 SHOWING POPUP - Not confident enough for auto-assign');
+        console.log('[Save] Best match confidence:', matchResult.confidence);
+        console.log('[Save] All matches:', allMatches.length);
+        
+        // Send popup to the page
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            action: 'SHOW_PROJECT_POPUP',
+            data: {
+              resourceId: resource.id,
+              resourceTitle: resource.title,
+              matches: allMatches,
+              suggestedProject: suggestion,
+              timeout: 30
+            }
+          });
+          console.log('[Save] ✅ Popup sent to page');
+        } catch (popupError) {
+          console.warn('[Save] Could not show popup:', popupError.message);
+        }
       }
       
     } catch (error) {
-      console.error('[Save] Categorization failed:', error);
+      console.error('[Save] Categorization error:', error);
       resource.projectId = null;
       resource._needsConfirmation = true;
     }
@@ -883,31 +884,34 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 export { handleSaveCommand };
 
-// Helper functions for project suggestions
-function getSuggestedProjectName(url) {
+// Helper function for project suggestions when AI result doesn't include one
+async function generateDefaultSuggestion(url, title, content) {
+  let domain = '';
+  let baseDomain = '';
   try {
-    const domain = new URL(url).hostname.replace('www.', '').split('.')[0];
-    return domain.charAt(0).toUpperCase() + domain.slice(1);
-  } catch {
-    return 'New Project';
-  }
-}
-
-function getSuggestedKeywords(resource) {
-  const words = (resource.title || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .split(/\s+/)
-    .filter(w => w.length > 3)
-    .slice(0, 5);
-  return words;
-}
-
-function getSuggestedUrls(url) {
+    const urlObj = new URL(url);
+    domain = urlObj.hostname.replace('www.', '');
+    baseDomain = domain.split('.')[0];
+  } catch(e) {}
+  
+  // Try AI for better suggestion
   try {
-    const domain = new URL(url).hostname.replace('www.', '');
-    return [`${domain}/*`];
-  } catch {
-    return [];
+    const { generateProjectSuggestion } = await import('../utils/projectMatcher.js');
+    return await generateProjectSuggestion({ url, title, textContent: content });
+  } catch(e) {
+    // Fallback
+    const words = (title || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter(w => w.length > 3 && !['this', 'that', 'with', 'from', 'about'].includes(w))
+      .slice(0, 5);
+    
+    return {
+      name: baseDomain.charAt(0).toUpperCase() + baseDomain.slice(1) || 'New Project',
+      keywords: [...new Set([...words, baseDomain, domain].filter(Boolean))].slice(0, 6),
+      relatedUrls: domain ? [`${domain}/*`] : [],
+      color: '#F5A623'
+    };
   }
 }

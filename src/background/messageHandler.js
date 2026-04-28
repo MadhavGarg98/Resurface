@@ -50,11 +50,12 @@ async function handleDismiss({ resourceId }) {
   await chrome.storage.local.remove(['_pendingClassification']);
 }
 
-async function handleCreateAndAssign({ name, keywords, resourceId, tags }) {
+async function handleCreateAndAssign({ name, keywords, resourceId, tags, relatedUrls, color }) {
   const project = {
     name,
     keywords,
-    color: '#F5A623',
+    relatedUrls: relatedUrls || [],
+    color: color || '#F5A623',
     createdAt: new Date().toISOString()
   };
   

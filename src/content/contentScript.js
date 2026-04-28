@@ -412,15 +412,20 @@
         popup.remove();
         
         chrome.runtime.sendMessage({
-          action: 'CREATE_AND_ASSIGN_PROJECT',
+          action: 'CREATE_PROJECT_AND_ASSIGN',
           data: {
             resourceId: resourceId,
-            projectName: name,
+            name: name,
             keywords: keywords,
             relatedUrls: suggestedProject?.relatedUrls || [],
             color: suggestedProject?.color || '#F5A623'
           }
         }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('[Popup] Message error:', chrome.runtime.lastError.message);
+            showToast('❌ Error. Try again.');
+            return;
+          }
           if (response?.success) showToast('✅ Project created & saved!');
           else showToast('❌ Error. Try again.');
         });
@@ -465,162 +470,6 @@
   }
 
   // ============================================
-  // DRAGGABLE CHAT BOT (RESTORED)
-  // ============================================
-  let chatBtn = null;
-  let isDragging = false;
-  let startX, startY, startRight, startBottom;
-
-  async function initChat() {
-    // Check if chat is enabled
-    const res = await chrome.storage.local.get(['settings']);
-    if (res.settings?.showFloatingChat === false) return;
-
-    chatBtn = document.createElement('div');
-    chatBtn.id = 'resurface-chat-btn';
-    
-    Object.assign(chatBtn.style, {
-      position: 'fixed', bottom: '24px', right: '24px', width: '56px', height: '56px',
-      background: 'linear-gradient(135deg, #F5F1EB 0%, #E8D5BE 100%)',
-      borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      cursor: 'grab', boxShadow: '0 8px 24px rgba(120, 100, 70, 0.15)', zIndex: '2147483645',
-      transition: 'transform 0.2s, box-shadow 0.2s', userSelect: 'none',
-      border: '2px solid #C9B99A'
-    });
-    
-    chatBtn.innerHTML = `
-      <img src="${chrome.runtime.getURL('icons/favicon.png')}" style="width: 28px; height: 28px; object-fit: contain;" alt="" />
-    `;
-    
-    // Dragging & Click
-    chatBtn.onmousedown = (e) => {
-      isDragging = false;
-      startX = e.clientX; startY = e.clientY;
-      const rect = chatBtn.getBoundingClientRect();
-      startRight = window.innerWidth - rect.right;
-      startBottom = window.innerHeight - rect.bottom;
-      chatBtn.style.cursor = 'grabbing';
-      
-      const onMouseMove = (me) => {
-        const dx = me.clientX - startX; const dy = me.clientY - startY;
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) isDragging = true;
-        if (isDragging) {
-          chatBtn.style.right = `${startRight - dx}px`;
-          chatBtn.style.bottom = `${startBottom - dy}px`;
-          chatBtn.style.transition = 'none';
-        }
-      };
-      
-      const onMouseUp = () => {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        chatBtn.style.cursor = 'grab';
-        chatBtn.style.transition = 'transform 0.2s, box-shadow 0.2s, right 0.3s, bottom 0.3s';
-        if (!isDragging) toggleChat();
-      };
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-    };
-
-    document.body.appendChild(chatBtn);
-  }
-
-  function toggleChat() {
-    const existing = document.getElementById('resurface-chat-panel');
-    if (existing) { existing.remove(); return; }
-
-    const chatHistory = [];
-    const panel = document.createElement('div');
-    panel.id = 'resurface-chat-panel';
-    const btnRect = chatBtn.getBoundingClientRect();
-    const isTopHalf = btnRect.top < window.innerHeight / 2;
-    
-    Object.assign(panel.style, {
-      position: 'fixed', 
-      bottom: isTopHalf ? 'auto' : `${window.innerHeight - btnRect.top + 12}px`,
-      top: isTopHalf ? `${btnRect.bottom + 12}px` : 'auto',
-      right: `${window.innerWidth - btnRect.right}px`,
-      width: '380px', height: '520px',
-      background: '#FAF8F5', border: '1px solid #E8E2D6', borderRadius: '24px',
-      boxShadow: '0 12px 48px rgba(0,0,0,0.15)', zIndex: '2147483645',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'system-ui, sans-serif',
-      animation: 'rsChatSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-    });
-
-    panel.innerHTML = `
-      <style>
-        @keyframes rsChatSlideIn { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        #rs-chat-msgs::-webkit-scrollbar { width: 4px; }
-        #rs-chat-msgs::-webkit-scrollbar-thumb { background: #DDD8CE; border-radius: 10px; }
-      </style>
-      <div style="padding: 16px 20px; border-bottom: 1px solid #E8E2D6; background: #FFF; display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <img src="${chrome.runtime.getURL('icons/favicon.png')}" style="width: 20px; height: 20px;" alt="" />
-          <span style="font-weight: 700; font-size: 15px; color: #3D3832;">Resurface AI</span>
-        </div>
-        <button id="rs-chat-close" style="background:none; border:none; cursor:pointer; color: #A8A29E; font-size: 20px;">✕</button>
-      </div>
-      <div id="rs-chat-msgs" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
-        <div style="background: #FFF; border: 1px solid #E8E2D6; padding: 12px 16px; border-radius: 18px; font-size: 13.5px; line-height: 1.6; color: #3D3832; align-self: flex-start; max-width: 85%;">
-          👋 <b>Hi!</b> I can help you find things in your library. Ask me about your saves!
-        </div>
-      </div>
-      <div style="padding: 16px 20px; border-top: 1px solid #E8E2D6; background: #FFF; display: flex; gap: 10px; align-items: center;">
-        <input id="rs-chat-input" type="text" placeholder="Ask about your library..." style="flex:1; padding: 12px 18px; border: 1.5px solid #eee; border-radius: 25px; outline: none; font-size: 14px; background: #f9f9f9;">
-        <button id="rs-chat-send" style="width: 40px; height: 40px; background: #C49A6C; color: #FFF; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m3 22 1-1 18-9-18-9-1 1 2 8h10"/></svg>
-        </button>
-      </div>
-    `;
-
-    document.body.appendChild(panel);
-    const input = panel.querySelector('#rs-chat-input');
-    input.focus();
-
-    panel.querySelector('#rs-chat-close').onclick = () => panel.remove();
-    
-    const sendBtn = panel.querySelector('#rs-chat-send');
-    const handleSend = async () => {
-      const text = input.value.trim();
-      if (!text) return;
-      input.value = '';
-      addChatMsg('user', text, chatHistory);
-      
-      const response = await chrome.runtime.sendMessage({
-        action: 'CHAT_QUERY',
-        data: { query: text, history: chatHistory }
-      });
-      
-      if (response.error) {
-        addChatMsg('bot', `❌ ${response.error}`);
-      } else {
-        addChatMsg('bot', response.text, chatHistory);
-      }
-    };
-
-    input.onkeydown = (e) => { if (e.key === 'Enter') handleSend(); };
-    sendBtn.onclick = handleSend;
-  }
-
-  function addChatMsg(type, text, history) {
-    const container = document.getElementById('rs-chat-msgs');
-    if (!container) return;
-    const msg = document.createElement('div');
-    Object.assign(msg.style, {
-      padding: '12px 16px', borderRadius: '18px', fontSize: '13.5px', lineHeight: '1.6',
-      background: type === 'user' ? '#C49A6C' : '#FFF',
-      color: type === 'user' ? '#FFF' : '#3D3832',
-      border: type === 'bot' ? '1px solid #E8E2D6' : 'none',
-      alignSelf: type === 'user' ? 'flex-end' : 'flex-start',
-      maxWidth: '85%', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', wordBreak: 'break-word'
-    });
-    msg.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-    container.appendChild(msg);
-    container.scrollTop = container.scrollHeight;
-    if (history) history.push({ role: type === 'user' ? 'user' : 'assistant', content: text });
-  }
-
-  // ============================================
   // HELPERS
   // ============================================
   function showToast(msg) {
@@ -640,7 +489,7 @@
   // ============================================
   // INITIALIZATION
   // ============================================
-  initChat();
+  // Chat bot is handled by chatBot.js (loaded separately via manifest)
   
   // Heartbeat: Ask background if we should show a sidebar
   // This helps when the background trigger was missed
